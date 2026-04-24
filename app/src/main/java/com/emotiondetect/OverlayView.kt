@@ -135,26 +135,39 @@ class OverlayView @JvmOverloads constructor(
         val result = results ?: return
         if (result.faceLandmarks().isEmpty()) return
 
-        val scaleX = width.toFloat() / imageWidth
-        val scaleY = height.toFloat() / imageHeight
+        // --- 计算 FIT_CENTER 映射（保持图像宽高比，居中显示）---
+        // CameraX PreviewView 默认 FILL_CENTER，但分析帧的归一化坐标
+        // 是基于原始图像比例的，需要用同样的 FIT_CENTER 方式映射到 View 上
+        val viewW = width.toFloat()
+        val viewH = height.toFloat()
+        val imgW = imageWidth.toFloat()
+        val imgH = imageHeight.toFloat()
+
+        // 等比缩放：选择让图像完整显示在 View 内的那个缩放比
+        val scale = minOf(viewW / imgW, viewH / imgH)
+
+        // 图像在 View 中居中后的偏移量
+        val offsetX = (viewW - imgW * scale) / 2f
+        val offsetY = (viewH - imgH * scale) / 2f
 
         // 绘制人脸连接线
-        drawFaceConnections(canvas, result, scaleX, scaleY)
+        drawFaceConnections(canvas, result, scale, offsetX, offsetY)
 
         // 绘制关键点
-        drawLandmarks(canvas, result, scaleX, scaleY)
+        drawLandmarks(canvas, result, scale, offsetX, offsetY)
 
         // 绘制情绪标签
         emotionResult?.let { emotion ->
-            drawEmotionLabel(canvas, result, emotion, scaleX, scaleY)
+            drawEmotionLabel(canvas, result, emotion, scale, offsetX, offsetY)
         }
     }
 
     private fun drawFaceConnections(
         canvas: Canvas,
         result: FaceLandmarkerResult,
-        scaleX: Float,
-        scaleY: Float
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float
     ) {
         result.faceLandmarks().forEach { landmarks ->
             // 绘制 MediaPipe 标准连接线
@@ -162,10 +175,10 @@ class OverlayView @JvmOverloads constructor(
                 val start = landmarks[connection.start()]
                 val end = landmarks[connection.end()]
                 canvas.drawLine(
-                    start.x() * imageWidth * scaleX,
-                    start.y() * imageHeight * scaleY,
-                    end.x() * imageWidth * scaleX,
-                    end.y() * imageHeight * scaleY,
+                    start.x() * imageWidth * scale + offsetX,
+                    start.y() * imageHeight * scale + offsetY,
+                    end.x() * imageWidth * scale + offsetX,
+                    end.y() * imageHeight * scale + offsetY,
                     connectionPaint
                 )
             }
@@ -175,10 +188,10 @@ class OverlayView @JvmOverloads constructor(
                 val start = landmarks[connection.start()]
                 val end = landmarks[connection.end()]
                 canvas.drawLine(
-                    start.x() * imageWidth * scaleX,
-                    start.y() * imageHeight * scaleY,
-                    end.x() * imageWidth * scaleX,
-                    end.y() * imageHeight * scaleY,
+                    start.x() * imageWidth * scale + offsetX,
+                    start.y() * imageHeight * scale + offsetY,
+                    end.x() * imageWidth * scale + offsetX,
+                    end.y() * imageHeight * scale + offsetY,
                     faceOutlinePaint
                 )
             }
@@ -188,8 +201,9 @@ class OverlayView @JvmOverloads constructor(
     private fun drawLandmarks(
         canvas: Canvas,
         result: FaceLandmarkerResult,
-        scaleX: Float,
-        scaleY: Float
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float
     ) {
         result.faceLandmarks().forEach { landmarks ->
             // 只绘制部分关键点（避免过于密集）
@@ -197,8 +211,8 @@ class OverlayView @JvmOverloads constructor(
             for (i in landmarks.indices step step) {
                 val lm = landmarks[i]
                 canvas.drawCircle(
-                    lm.x() * imageWidth * scaleX,
-                    lm.y() * imageHeight * scaleY,
+                    lm.x() * imageWidth * scale + offsetX,
+                    lm.y() * imageHeight * scale + offsetY,
                     2.5f,
                     landmarkPaint
                 )
@@ -210,8 +224,9 @@ class OverlayView @JvmOverloads constructor(
         canvas: Canvas,
         result: FaceLandmarkerResult,
         emotion: EmotionClassifier.EmotionResult,
-        scaleX: Float,
-        scaleY: Float
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float
     ) {
         if (result.faceLandmarks().isEmpty()) return
 
@@ -224,8 +239,8 @@ class OverlayView @JvmOverloads constructor(
         var minY = Float.MAX_VALUE
 
         landmarks.forEach { lm ->
-            val x = lm.x() * imageWidth * scaleX
-            val y = lm.y() * imageHeight * scaleY
+            val x = lm.x() * imageWidth * scale + offsetX
+            val y = lm.y() * imageHeight * scale + offsetY
             minX = min(minX, x)
             maxX = max(maxX, x)
             minY = min(minY, y)

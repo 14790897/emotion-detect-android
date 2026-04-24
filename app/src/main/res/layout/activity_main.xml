@@ -17,7 +17,7 @@
         app:layout_constraintBottom_toTopOf="@id/bottom_bar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:scaleType="fillCenter" />
+        app:scaleType="fitCenter" />
 
     <!-- 人脸网格叠加层 -->
     <com.emotiondetect.OverlayView
