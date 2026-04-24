@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,36 @@ plugins {
 android {
     namespace = "com.emotiondetect"
     compileSdk = 34
+
+    val signingPropsFile = rootProject.file("app/signing.properties")
+    val signingProps = Properties()
+    val hasSigningProps = signingPropsFile.exists().also { exists ->
+        if (exists) {
+            signingPropsFile.inputStream().use(signingProps::load)
+        }
+    }
+
+    val storeFileName = signingProps.getProperty("storeFile")
+    val storePasswordValue = signingProps.getProperty("storePassword")
+    val keyAliasValue = signingProps.getProperty("keyAlias")
+    val keyPasswordValue = signingProps.getProperty("keyPassword")
+
+    if (hasSigningProps) {
+        check(!storeFileName.isNullOrBlank() && !storePasswordValue.isNullOrBlank() && !keyAliasValue.isNullOrBlank() && !keyPasswordValue.isNullOrBlank()) {
+            "app/signing.properties is missing required keys: storeFile, storePassword, keyAlias, keyPassword"
+        }
+    }
+
+    signingConfigs {
+        if (hasSigningProps) {
+            create("release") {
+                storeFile = rootProject.file("app/$storeFileName")
+                storePassword = storePasswordValue
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.emotiondetect"
@@ -22,6 +54,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasSigningProps) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
