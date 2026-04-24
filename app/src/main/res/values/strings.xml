@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">情绪检测</string>
+    <string name="switch_camera">切换摄像头</string>
+    <string name="camera_permission_required">需要摄像头权限才能运行此应用</string>
+    <string name="permission_denied">权限已拒绝，请在设置中开启摄像头权限</string>
+    <string name="emotion_happy">开心</string>
+    <string name="emotion_sad">悲伤</string>
+    <string name="emotion_surprised">惊讶</string>
+    <string name="emotion_angry">愤怒</string>
+    <string name="emotion_disgusted">厌恶</string>
+    <string name="emotion_fearful">恐惧</string>
+    <string name="emotion_neutral">中性</string>
+    <string name="no_face_detected">未检测到人脸</string>
+    <string name="inference_time_ms">推理: %dms</string>
+</resources>
