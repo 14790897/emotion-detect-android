@@ -15,3 +15,8 @@
 local.properties
 app/build
 .idea
+
+# ── 签名文件（禁止提交）──────────────────────────────
+signing.jks
+*.jks
+app/signing.properties
