@@ -85,27 +85,31 @@ jobs:
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      - name: Decode signing config
+      - name: Decode signing keystore
+        if: env.ANDROID_SIGNING_STORE_FILE != ''
+        id: decode_keystore
+        uses: timheuer/base64-to-file@v1.2.4
         env:
-          # 请在 GitHub Repository Settings → Secrets 中添加
-          # ANDROID_SIGNING_STORE_FILE: base64 编码的 keystore 文件
-          # ANDROID_SIGNING_KEY_ALIAS: keystore 别名
-          # ANDROID_SIGNING_KEY_PASSWORD: 密钥密码
-          # ANDROID_SIGNING_STORE_PASSWORD: keystore 密码
+          ANDROID_SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
+        with:
+          fileName: signing.jks
+          fileDir: app
+          encodedString: ${{ env.ANDROID_SIGNING_STORE_FILE }}
+
+      - name: Create signing.properties
+        if: env.ANDROID_SIGNING_STORE_FILE != ''
+        env:
           ANDROID_SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
           ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
         run: |
-          if [ -n "$ANDROID_SIGNING_STORE_FILE" ]; then
-            echo "$ANDROID_SIGNING_STORE_FILE" | base64 -d > app/signing.jks
-            {
-              echo "storeFile=signing.jks"
-              echo "storePassword=$ANDROID_SIGNING_STORE_PASSWORD"
-              echo "keyAlias=$ANDROID_SIGNING_KEY_ALIAS"
-              echo "keyPassword=$ANDROID_SIGNING_KEY_PASSWORD"
-            } > app/signing.properties
-          fi
+          {
+            echo "storeFile=signing.jks"
+            echo "storePassword=$ANDROID_SIGNING_STORE_PASSWORD"
+            echo "keyAlias=$ANDROID_SIGNING_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_SIGNING_KEY_PASSWORD"
+          } > app/signing.properties
 
       - name: Build release APK
         run: gradle assembleRelease
