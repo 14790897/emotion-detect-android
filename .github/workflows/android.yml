@@ -99,12 +99,12 @@ jobs:
         run: |
           if [ -n "$ANDROID_SIGNING_STORE_FILE" ]; then
             echo "$ANDROID_SIGNING_STORE_FILE" | base64 -d > app/signing.jks
-            cat > app/signing.properties << EOF
-            storeFile=signing.jks
-            storePassword=$ANDROID_SIGNING_STORE_PASSWORD
-            keyAlias=$ANDROID_SIGNING_KEY_ALIAS
-            keyPassword=$ANDROID_SIGNING_KEY_PASSWORD
-            EOF
+            {
+              echo "storeFile=signing.jks"
+              echo "storePassword=$ANDROID_SIGNING_STORE_PASSWORD"
+              echo "keyAlias=$ANDROID_SIGNING_KEY_ALIAS"
+              echo "keyPassword=$ANDROID_SIGNING_KEY_PASSWORD"
+            } > app/signing.properties
           fi
 
       - name: Build release APK
