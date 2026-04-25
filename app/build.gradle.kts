@@ -101,4 +101,7 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
+
+    // ONNX Runtime（微软 FER+ 情绪模型推理）
+    implementation(libs.onnxruntime)
 }

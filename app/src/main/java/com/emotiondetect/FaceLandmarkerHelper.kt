@@ -14,14 +14,15 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * FaceLandmarkerHelper — MediaPipe Face Landmarker 封装类
  *
  * 负责初始化 FaceLandmarker，处理 CameraX 实时帧，
- * 输出包含 Blendshapes 的检测结果。
+ * 输出包含 Blendshapes 的检测结果及 ONNX 所需的人脸裁切图。
  */
 class FaceLandmarkerHelper(
     var minFaceDetectionConfidence: Float = DEFAULT_FACE_DETECTION_CONFIDENCE,
@@ -33,7 +34,10 @@ class FaceLandmarkerHelper(
 ) {
 
     private var faceLandmarker: FaceLandmarker? = null
-    private var backgroundExecutor: ScheduledExecutorService? = null
+
+    /** 最新旋转后的帧 Bitmap（用于 ONNX 人脸裁切） */
+    private var latestFrameBitmap: Bitmap? = null
+    private val bitmapLock = Any()
 
     init {
         setupFaceLandmarker()
@@ -77,7 +81,7 @@ class FaceLandmarkerHelper(
 
     /**
      * 处理来自 CameraX 的 ImageProxy 帧
-     * 将图像转换为 Bitmap 后传入 FaceLandmarker
+     * 将图像转换为 Bitmap 后传入 FaceLandmarker（异步）
      */
     fun detectLiveStream(
         imageProxy: ImageProxy,
@@ -94,9 +98,7 @@ class FaceLandmarkerHelper(
         imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
 
         val matrix = Matrix().apply {
-            // 旋转以适配摄像头方向
             postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
-            // 前置摄像头需要水平镜像
             if (isFrontCamera) {
                 postScale(-1f, 1f, imageProxy.width.toFloat(), imageProxy.height.toFloat())
             }
@@ -110,6 +112,13 @@ class FaceLandmarkerHelper(
             matrix,
             true
         )
+
+        // 缓存最新帧，供异步结果回调时裁切人脸用
+        synchronized(bitmapLock) {
+            val oldBitmap = latestFrameBitmap
+            latestFrameBitmap = rotatedBitmap
+            oldBitmap?.recycle()
+        }
 
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
         detectAsync(mpImage, frameTime)
@@ -133,14 +142,82 @@ class FaceLandmarkerHelper(
         val finishTimeMs = SystemClock.uptimeMillis()
         val inferenceTime = finishTimeMs - result.timestampMs()
 
+        // 根据 landmarks 从缓存帧裁切人脸（只在有脸时裁切）
+        val faceCrop = cropFaceFromLandmarks(result, input.width, input.height)
+
         faceLandmarkerHelperListener?.onResults(
             ResultBundle(
-                listOf(result),
-                inferenceTime,
-                input.height,
-                input.width
+                results = listOf(result),
+                inferenceTime = inferenceTime,
+                inputImageHeight = input.height,
+                inputImageWidth = input.width,
+                faceCropBitmap = faceCrop
             )
         )
+    }
+
+    /**
+     * 根据检测结果中的 landmarks，从帧 Bitmap 裁切出人脸区域（64×64）
+     */
+    private fun cropFaceFromLandmarks(
+        result: FaceLandmarkerResult,
+        imgWidth: Int,
+        imgHeight: Int
+    ): Bitmap? {
+        val landmarks = result.faceLandmarks().firstOrNull() ?: return null
+        if (landmarks.isEmpty()) return null
+
+        val frame = synchronized(bitmapLock) {
+            val f = latestFrameBitmap
+            if (f == null || f.isRecycled) return null
+            // 创建一个副本以避免在推理过程中原图被回收导致的崩溃
+            try {
+                f.copy(f.config, false)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: return null
+
+        try {
+            var minX = Float.MAX_VALUE
+            var maxX = Float.MIN_VALUE
+            var minY = Float.MAX_VALUE
+            var maxY = Float.MIN_VALUE
+            landmarks.forEach { lm ->
+                val x = lm.x() * imgWidth
+                val y = lm.y() * imgHeight
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                minY = min(minY, y)
+                maxY = max(maxY, y)
+            }
+
+            val padding = (maxX - minX) * FACE_CROP_PADDING
+            val left = (minX - padding).coerceAtLeast(0f).toInt()
+            val top = (minY - padding).coerceAtLeast(0f).toInt()
+            val right = (maxX + padding).coerceAtMost(imgWidth.toFloat()).toInt()
+            val bottom = (maxY + padding).coerceAtMost(imgHeight.toFloat()).toInt()
+
+            val cropW = right - left
+            val cropH = bottom - top
+            if (cropW <= 0 || cropH <= 0 || left + cropW > frame.width || top + cropH > frame.height) {
+                frame.recycle()
+                return null
+            }
+
+            val cropped = Bitmap.createBitmap(frame, left, top, cropW, cropH)
+            val scaled = Bitmap.createScaledBitmap(cropped, FACE_CROP_SIZE, FACE_CROP_SIZE, true)
+            
+            // 回收中间产生的临时 Bitmap
+            if (cropped != scaled) cropped.recycle()
+            frame.recycle()
+            
+            return scaled
+        } catch (e: Exception) {
+            Log.e(TAG, "人脸裁切失败", e)
+            if (!frame.isRecycled) frame.recycle()
+            return null
+        }
     }
 
     /**
@@ -159,6 +236,10 @@ class FaceLandmarkerHelper(
     fun clearFaceLandmarker() {
         faceLandmarker?.close()
         faceLandmarker = null
+        synchronized(bitmapLock) {
+            latestFrameBitmap?.recycle()
+            latestFrameBitmap = null
+        }
     }
 
     companion object {
@@ -172,6 +253,8 @@ class FaceLandmarkerHelper(
 
         const val OTHER_ERROR = 0
         const val GPU_ERROR = 1
+        const val FACE_CROP_SIZE = 64       // ONNX 模型输入尺寸
+        const val FACE_CROP_PADDING = 0.2f  // 人脸框外扩 20%
     }
 
     /**
@@ -181,7 +264,9 @@ class FaceLandmarkerHelper(
         val results: List<FaceLandmarkerResult>,
         val inferenceTime: Long,
         val inputImageHeight: Int,
-        val inputImageWidth: Int
+        val inputImageWidth: Int,
+        /** 人脸区域裁切图（已缩放至 FACE_CROP_SIZE×FACE_CROP_SIZE），无人脸时为 null */
+        val faceCropBitmap: Bitmap? = null
     )
 
     /**
