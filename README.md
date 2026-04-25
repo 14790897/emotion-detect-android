@@ -60,3 +60,11 @@ app/src/main/java/com/emotiondetect/
 | 😐 中性 | 其他情绪均低 | ⚪ 白色 |
 
 内置 5 帧滑动平均滤波，减少帧间抖动。
+
+
+## 模型下载
+https://github.com/sb-ai-lab/EmotiEffLib/blob/main/models/affectnet_emotions/onnx/enet_b0_8_best_vgaf.onnx
+https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion_ferplus/README.md
+
+## logcat过滤日志
+package:com.emotiondetect

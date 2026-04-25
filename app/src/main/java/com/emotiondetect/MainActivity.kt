@@ -58,8 +58,10 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     private var currentFps = 0.0
     private var currentModelName = "None"
 
-    // ONNX 情绪分类器（emotion-ferplus-8.onnx）
+    // ONNX 情绪分类器
     private val ferEmotionClassifier by lazy { FerEmotionClassifier(this) }
+    private val hseEmotionClassifier by lazy { HseEmotionClassifier(this) }
+    private var selectedModelId = 0 // 0: FER+, 1: HSEmotion
 
     // 权限请求
     private val requestPermissionLauncher =
@@ -89,13 +91,29 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         // 初始化 executor
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        // 初始化 FaceLandmarkerHelper 和 ONNX 分类器
+        // 加载保存的模型设置
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        selectedModelId = prefs.getInt("selected_model", 0)
+
+        // 初始化所有模型
         cameraExecutor.execute {
+            Log.d(TAG, "后台线程：开始初始化 FaceLandmarker 和 AI 模型...")
             faceLandmarkerHelper = FaceLandmarkerHelper(
                 context = this,
                 faceLandmarkerHelperListener = this
             )
+            Log.d(TAG, "FaceLandmarkerHelper 初始化指令已发出")
+            
             ferEmotionClassifier.initialize()
+            Log.d(TAG, "FER+ 初始化完成，状态: ${ferEmotionClassifier.isReady()}")
+            
+            hseEmotionClassifier.initialize()
+            Log.d(TAG, "HSEmotion 初始化完成，状态: ${hseEmotionClassifier.isReady()}")
+        }
+
+        // 设置按钮
+        binding.btnSettings.setOnClickListener {
+            showModelSelectionDialog()
         }
 
         // 切换摄像头按钮
@@ -241,25 +259,44 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 binding.tvNoFace.visibility = View.GONE
 
                 // --- ONNX 推理路径（优先）---
-                val ferResult = resultBundle.faceCropBitmap?.let { faceCrop ->
-                    if (ferEmotionClassifier.isReady()) {
-                        ferEmotionClassifier.classify(faceCrop).also {
-                            currentModelName = "ONNX (FER+)"
+                var ferResult: FerEmotionClassifier.Result? = null
+                val faceCrop = resultBundle.faceCropBitmap
+                
+                if (faceCrop != null) {
+                    when (selectedModelId) {
+                        0 -> {
+                            if (ferEmotionClassifier.isReady()) {
+                                ferResult = ferEmotionClassifier.classify(faceCrop)
+                                if (ferResult != null) {
+                                    currentModelName = "ONNX (FER+)"
+                                }
+                            } else {
+                                Log.w(TAG, "FER+ 模型尚未就绪")
+                            }
                         }
-                    } else null
+                        1 -> {
+                            if (hseEmotionClassifier.isReady()) {
+                                ferResult = hseEmotionClassifier.classify(faceCrop)
+                                if (ferResult != null) {
+                                    currentModelName = "HSEmotion (E-Net)"
+                                }
+                            } else {
+                                Log.w(TAG, "HSEmotion 模型尚未就绪")
+                            }
+                        }
+                    }
                 }
 
                 // --- Blendshape 备用路径（ONNX 失败时降级）---
                 val blendshapeResult = EmotionClassifier.classify(
                     result.faceBlendshapes().orElse(emptyList())
-                ).also {
-                    if (ferResult == null) currentModelName = "MediaPipe"
-                }
+                )
 
                 // 优先使用 ONNX 结果，降级到 Blendshape
                 val emotionResult = if (ferResult != null) {
                     ferResult.toEmotionResult()
                 } else {
+                    currentModelName = "MediaPipe"
                     blendshapeResult
                 }
 
@@ -304,10 +341,25 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         }
     }
 
+    private fun showModelSelectionDialog() {
+        val models = arrayOf("FER+ (经典, 64x64)", "HSEmotion (现代, 224x224)")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("选择识别模型")
+            .setSingleChoiceItems(models, selectedModelId) { dialog, which ->
+                selectedModelId = which
+                getSharedPreferences("settings", MODE_PRIVATE).edit().putInt("selected_model", which).apply()
+                dialog.dismiss()
+                Toast.makeText(this, "模型已切换: ${models[which]}", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.execute {
             ferEmotionClassifier.close()
+            hseEmotionClassifier.close()
         }
         cameraExecutor.shutdown()
     }
