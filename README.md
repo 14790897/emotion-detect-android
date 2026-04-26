@@ -68,3 +68,6 @@ https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion_
 
 ## logcat过滤日志
 package:com.emotiondetect
+
+## 开发日志
+模型更新之后，在旧版应用上会有旧缓存，必须卸载之后才能更新
