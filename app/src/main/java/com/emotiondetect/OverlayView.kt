@@ -34,7 +34,7 @@ class OverlayView @JvmOverloads constructor(
 
     // ---------- 数据 ----------
     private var results: FaceLandmarkerResult? = null
-    private var emotionResult: EmotionClassifier.EmotionResult? = null
+    private var emotionResults: List<EmotionClassifier.EmotionResult>? = null
     private var imageWidth: Int = 1
     private var imageHeight: Int = 1
 
@@ -94,17 +94,17 @@ class OverlayView @JvmOverloads constructor(
 
     fun setResults(
         faceLandmarkerResults: FaceLandmarkerResult,
-        emotion: EmotionClassifier.EmotionResult,
+        emotions: List<EmotionClassifier.EmotionResult>,
         imageWidth: Int,
         imageHeight: Int
     ) {
         results = faceLandmarkerResults
-        emotionResult = emotion
+        emotionResults = emotions
         this.imageWidth = imageWidth
         this.imageHeight = imageHeight
 
-        // 置信度动画
-        val targetConf = emotion.confidence
+        // 置信度动画（暂时只取第一个，或者可以为每个脸做动画，这里简化处理）
+        val targetConf = emotions.firstOrNull()?.confidence ?: 0f
         confidenceAnimator?.cancel()
         confidenceAnimator = ValueAnimator.ofFloat(animatedConfidence, targetConf).apply {
             duration = 300
@@ -121,7 +121,7 @@ class OverlayView @JvmOverloads constructor(
 
     fun clearResults() {
         results = null
-        emotionResult = null
+        emotionResults = null
         EmotionClassifier.clearSmoothingBuffer()
         animatedConfidence = 0f
         invalidate()
@@ -135,18 +135,13 @@ class OverlayView @JvmOverloads constructor(
         val result = results ?: return
         if (result.faceLandmarks().isEmpty()) return
 
-        // --- 计算 FIT_CENTER 映射（保持图像宽高比，居中显示）---
-        // CameraX PreviewView 默认 FILL_CENTER，但分析帧的归一化坐标
-        // 是基于原始图像比例的，需要用同样的 FIT_CENTER 方式映射到 View 上
+        // --- 计算 FIT_CENTER 映射 ---
         val viewW = width.toFloat()
         val viewH = height.toFloat()
         val imgW = imageWidth.toFloat()
         val imgH = imageHeight.toFloat()
 
-        // 等比缩放：选择让图像完整显示在 View 内的那个缩放比
         val scale = minOf(viewW / imgW, viewH / imgH)
-
-        // 图像在 View 中居中后的偏移量
         val offsetX = (viewW - imgW * scale) / 2f
         val offsetY = (viewH - imgH * scale) / 2f
 
@@ -156,9 +151,11 @@ class OverlayView @JvmOverloads constructor(
         // 绘制关键点
         drawLandmarks(canvas, result, scale, offsetX, offsetY)
 
-        // 绘制情绪标签
-        emotionResult?.let { emotion ->
-            drawEmotionLabel(canvas, result, emotion, scale, offsetX, offsetY)
+        // 绘制所有情绪标签
+        emotionResults?.forEachIndexed { index, emotion ->
+            if (index < result.faceLandmarks().size) {
+                drawEmotionLabel(canvas, result, index, emotion, scale, offsetX, offsetY)
+            }
         }
     }
 
@@ -223,14 +220,13 @@ class OverlayView @JvmOverloads constructor(
     private fun drawEmotionLabel(
         canvas: Canvas,
         result: FaceLandmarkerResult,
+        faceIndex: Int,
         emotion: EmotionClassifier.EmotionResult,
         scale: Float,
         offsetX: Float,
         offsetY: Float
     ) {
-        if (result.faceLandmarks().isEmpty()) return
-
-        val landmarks = result.faceLandmarks()[0]
+        val landmarks = result.faceLandmarks().getOrNull(faceIndex) ?: return
         if (landmarks.isEmpty()) return
 
         // 计算人脸边界框
@@ -294,7 +290,8 @@ class OverlayView @JvmOverloads constructor(
         )
 
         // 绘制置信度文字
-        val confText = "${(animatedConfidence * 100).toInt()}%"
+        val currentConfidence = if (faceIndex == 0) animatedConfidence else emotion.confidence
+        val confText = "${(currentConfidence * 100).toInt()}%"
         subTextPaint.color = if (emotion.emotion == EmotionClassifier.Emotion.SURPRISED) {
             Color.parseColor("#555555")
         } else {
@@ -311,7 +308,7 @@ class OverlayView @JvmOverloads constructor(
         val barRect = RectF(barLeft, barTop, barRight, barTop + barHeight)
         canvas.drawRoundRect(barRect, barHeight / 2f, barHeight / 2f, progressBgPaint)
 
-        val progressRight = barLeft + (barRight - barLeft) * animatedConfidence
+        val progressRight = barLeft + (barRight - barLeft) * currentConfidence
         if (progressRight > barLeft) {
             val progressRect = RectF(barLeft, barTop, progressRight, barTop + barHeight)
             val progressGrad = LinearGradient(

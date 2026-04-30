@@ -60,7 +60,7 @@ object EmotionClassifier {
     private const val SMOOTHING_WINDOW = 5
 
     /**
-     * 主分类方法
+     * 主分类方法（兼容旧接口）
      *
      * @param blendshapes MediaPipe 输出的 Blendshape 系数列表（每张脸）
      * @return 情绪结果，若无输入则返回 NEUTRAL
@@ -70,24 +70,38 @@ object EmotionClassifier {
             clearSmoothingBuffer()
             return EmotionResult(Emotion.NEUTRAL, 0f)
         }
+        return classifySingle(blendshapes[0], useSmoothing = true)
+    }
 
-        // 取第一张脸的 Blendshapes
-        val faceBlendshapes = blendshapes[0]
+    /**
+     * 对单个人脸进行分类
+     *
+     * @param faceBlendshapes 单张脸的 Blendshape 系数列表
+     * @param useSmoothing 是否开启时间平滑（多人模式下建议关闭或单独管理）
+     */
+    fun classifySingle(
+        faceBlendshapes: List<Category>,
+        useSmoothing: Boolean = false
+    ): EmotionResult {
         val bsMap = faceBlendshapes.associate { it.categoryName() to it.score() }
 
         // 计算各情绪分数
         val rawScores = computeEmotionScores(bsMap)
 
         // 平滑处理
-        val smoothed = applySmoothing(rawScores)
+        val finalScores = if (useSmoothing) {
+            applySmoothing(rawScores)
+        } else {
+            rawScores
+        }
 
         // 找出得分最高情绪
-        val topEntry = smoothed.maxByOrNull { it.value } ?: return EmotionResult(Emotion.NEUTRAL, 0f)
+        val topEntry = finalScores.maxByOrNull { it.value } ?: return EmotionResult(Emotion.NEUTRAL, 0f)
 
         return EmotionResult(
             emotion = topEntry.key,
             confidence = topEntry.value.coerceIn(0f, 1f),
-            scores = smoothed
+            scores = finalScores
         )
     }
 

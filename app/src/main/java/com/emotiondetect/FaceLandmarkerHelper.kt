@@ -142,8 +142,8 @@ class FaceLandmarkerHelper(
         val finishTimeMs = SystemClock.uptimeMillis()
         val inferenceTime = finishTimeMs - result.timestampMs()
 
-        // 根据 landmarks 从缓存帧裁切人脸（只在有脸时裁切）
-        val faceCrop = cropFaceFromLandmarks(result, input.width, input.height)
+        // 根据 landmarks 从缓存帧裁切所有检测到的人脸
+        val faceCrops = cropAllFacesFromLandmarks(result, input.width, input.height)
 
         faceLandmarkerHelperListener?.onResults(
             ResultBundle(
@@ -151,73 +151,73 @@ class FaceLandmarkerHelper(
                 inferenceTime = inferenceTime,
                 inputImageHeight = input.height,
                 inputImageWidth = input.width,
-                faceCropBitmap = faceCrop
+                faceCropBitmaps = faceCrops
             )
         )
     }
 
     /**
-     * 根据检测结果中的 landmarks，从帧 Bitmap 裁切出人脸区域（64×64）
+     * 根据检测结果中的 landmarks，从帧 Bitmap 裁切出所有检测到的人脸区域（64×64）
      */
-    private fun cropFaceFromLandmarks(
+    private fun cropAllFacesFromLandmarks(
         result: FaceLandmarkerResult,
         imgWidth: Int,
         imgHeight: Int
-    ): Bitmap? {
-        val landmarks = result.faceLandmarks().firstOrNull() ?: return null
-        if (landmarks.isEmpty()) return null
+    ): List<Bitmap> {
+        val allLandmarks = result.faceLandmarks()
+        if (allLandmarks.isEmpty()) return emptyList()
 
         val frame = synchronized(bitmapLock) {
             val f = latestFrameBitmap
-            if (f == null || f.isRecycled) return null
-            // 创建一个副本以避免在推理过程中原图被回收导致的崩溃
+            if (f == null || f.isRecycled) return emptyList()
             try {
                 f.copy(f.config, false)
             } catch (e: Exception) {
                 null
             }
-        } ?: return null
+        } ?: return emptyList()
 
+        val crops = mutableListOf<Bitmap>()
         try {
-            var minX = Float.MAX_VALUE
-            var maxX = Float.MIN_VALUE
-            var minY = Float.MAX_VALUE
-            var maxY = Float.MIN_VALUE
-            landmarks.forEach { lm ->
-                val x = lm.x() * imgWidth
-                val y = lm.y() * imgHeight
-                minX = min(minX, x)
-                maxX = max(maxX, x)
-                minY = min(minY, y)
-                maxY = max(maxY, y)
+            for (landmarks in allLandmarks) {
+                if (landmarks.isEmpty()) continue
+
+                var minX = Float.MAX_VALUE
+                var maxX = Float.MIN_VALUE
+                var minY = Float.MAX_VALUE
+                var maxY = Float.MIN_VALUE
+                landmarks.forEach { lm ->
+                    val x = lm.x() * imgWidth
+                    val y = lm.y() * imgHeight
+                    minX = min(minX, x)
+                    maxX = max(maxX, x)
+                    minY = min(minY, y)
+                    maxY = max(maxY, y)
+                }
+
+                val padding = (maxX - minX) * FACE_CROP_PADDING
+                val left = (minX - padding).coerceAtLeast(0f).toInt()
+                val top = (minY - padding).coerceAtLeast(0f).toInt()
+                val right = (maxX + padding).coerceAtMost(imgWidth.toFloat()).toInt()
+                val bottom = (maxY + padding).coerceAtMost(imgHeight.toFloat()).toInt()
+
+                val cropW = right - left
+                val cropH = bottom - top
+                if (cropW <= 0 || cropH <= 0 || left + cropW > frame.width || top + cropH > frame.height) {
+                    continue
+                }
+
+                val cropped = Bitmap.createBitmap(frame, left, top, cropW, cropH)
+                val scaled = Bitmap.createScaledBitmap(cropped, FACE_CROP_SIZE, FACE_CROP_SIZE, true)
+                if (cropped != scaled) cropped.recycle()
+                crops.add(scaled)
             }
-
-            val padding = (maxX - minX) * FACE_CROP_PADDING
-            val left = (minX - padding).coerceAtLeast(0f).toInt()
-            val top = (minY - padding).coerceAtLeast(0f).toInt()
-            val right = (maxX + padding).coerceAtMost(imgWidth.toFloat()).toInt()
-            val bottom = (maxY + padding).coerceAtMost(imgHeight.toFloat()).toInt()
-
-            val cropW = right - left
-            val cropH = bottom - top
-            if (cropW <= 0 || cropH <= 0 || left + cropW > frame.width || top + cropH > frame.height) {
-                frame.recycle()
-                return null
-            }
-
-            val cropped = Bitmap.createBitmap(frame, left, top, cropW, cropH)
-            val scaled = Bitmap.createScaledBitmap(cropped, FACE_CROP_SIZE, FACE_CROP_SIZE, true)
-            
-            // 回收中间产生的临时 Bitmap
-            if (cropped != scaled) cropped.recycle()
-            frame.recycle()
-            
-            return scaled
         } catch (e: Exception) {
             Log.e(TAG, "人脸裁切失败", e)
+        } finally {
             if (!frame.isRecycled) frame.recycle()
-            return null
         }
+        return crops
     }
 
     /**
@@ -265,8 +265,8 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
-        /** 人脸区域裁切图（已缩放至 FACE_CROP_SIZE×FACE_CROP_SIZE），无人脸时为 null */
-        val faceCropBitmap: Bitmap? = null
+        /** 所有检测到的人脸裁切图 */
+        val faceCropBitmaps: List<Bitmap> = emptyList()
     )
 
     /**

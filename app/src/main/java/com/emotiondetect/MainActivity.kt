@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     private var processedFrameCount = 0
     private var currentFps = 0.0
     private var currentModelName = "None"
+    private var maxNumFaces = 1 // 1: 单人, 5: 多人
 
     // ONNX 情绪分类器
     private val ferEmotionClassifier by lazy { FerEmotionClassifier(this) }
@@ -94,12 +95,14 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         // 加载保存的模型设置
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         selectedModelId = prefs.getInt("selected_model", 0)
+        maxNumFaces = prefs.getInt("max_num_faces", 1)
 
         // 初始化所有模型
         cameraExecutor.execute {
             Log.d(TAG, "后台线程：开始初始化 FaceLandmarker 和 AI 模型...")
             faceLandmarkerHelper = FaceLandmarkerHelper(
                 context = this,
+                maxNumFaces = maxNumFaces,
                 faceLandmarkerHelperListener = this
             )
             Log.d(TAG, "FaceLandmarkerHelper 初始化指令已发出")
@@ -254,55 +257,52 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 else -> 0xFFF44336.toInt() // 红色
             })
 
-            if (result.faceLandmarks().isNotEmpty()) {
+            val allFaceLandmarks = result.faceLandmarks()
+            val allFaceBlendshapes = result.faceBlendshapes().orElse(emptyList())
+
+            if (allFaceLandmarks.isNotEmpty()) {
                 // 有人脸：分类情绪 + 更新叠加层
                 binding.tvNoFace.visibility = View.GONE
 
-                // --- ONNX 推理路径（优先）---
-                var ferResult: FerEmotionClassifier.Result? = null
-                val faceCrop = resultBundle.faceCropBitmap
-                
-                if (faceCrop != null) {
-                    when (selectedModelId) {
-                        0 -> {
-                            if (ferEmotionClassifier.isReady()) {
-                                ferResult = ferEmotionClassifier.classify(faceCrop)
-                                if (ferResult != null) {
-                                    currentModelName = "ONNX (FER+)"
+                val finalEmotionResults = mutableListOf<EmotionClassifier.EmotionResult>()
+
+                for (i in allFaceLandmarks.indices) {
+                    val faceCrop = resultBundle.faceCropBitmaps.getOrNull(i)
+                    val faceBlendshape = allFaceBlendshapes.getOrNull(i) ?: emptyList()
+
+                    var ferResult: FerEmotionClassifier.Result? = null
+                    
+                    if (faceCrop != null) {
+                        when (selectedModelId) {
+                            0 -> {
+                                if (ferEmotionClassifier.isReady()) {
+                                    ferResult = ferEmotionClassifier.classify(faceCrop)
+                                    if (i == 0) currentModelName = "ONNX (FER+)"
                                 }
-                            } else {
-                                Log.w(TAG, "FER+ 模型尚未就绪")
                             }
-                        }
-                        1 -> {
-                            if (hseEmotionClassifier.isReady()) {
-                                ferResult = hseEmotionClassifier.classify(faceCrop)
-                                if (ferResult != null) {
-                                    currentModelName = "HSEmotion (E-Net)"
+                            1 -> {
+                                if (hseEmotionClassifier.isReady()) {
+                                    ferResult = hseEmotionClassifier.classify(faceCrop)
+                                    if (i == 0) currentModelName = "HSEmotion (E-Net)"
                                 }
-                            } else {
-                                Log.w(TAG, "HSEmotion 模型尚未就绪")
                             }
                         }
                     }
-                }
 
-                // --- Blendshape 备用路径（ONNX 失败时降级）---
-                val blendshapeResult = EmotionClassifier.classify(
-                    result.faceBlendshapes().orElse(emptyList())
-                )
-
-                // 优先使用 ONNX 结果，降级到 Blendshape
-                val emotionResult = if (ferResult != null) {
-                    ferResult.toEmotionResult()
-                } else {
-                    currentModelName = "MediaPipe"
-                    blendshapeResult
+                    // 优先使用 ONNX 结果，降级到 Blendshape
+                    val emotionResult = if (ferResult != null) {
+                        ferResult.toEmotionResult()
+                    } else {
+                        if (i == 0) currentModelName = "MediaPipe"
+                        // 只有单人模式才开启平滑
+                        EmotionClassifier.classifySingle(faceBlendshape, useSmoothing = (maxNumFaces == 1))
+                    }
+                    finalEmotionResults.add(emotionResult)
                 }
 
                 binding.overlayView.setResults(
                     result,
-                    emotionResult,
+                    finalEmotionResults,
                     resultBundle.inputImageWidth,
                     resultBundle.inputImageHeight
                 )
@@ -343,13 +343,68 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
 
     private fun showModelSelectionDialog() {
         val models = arrayOf("FER+ (经典, 64x64)", "HSEmotion (现代, 224x224)")
+        val detectionModes = arrayOf("单人检测", "多人检测 (最多5人)")
+        
+        val dialogView = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(60, 40, 60, 10)
+            
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = "识别模型"
+                textSize = 16f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 20, 0, 10)
+            })
+            
+            val modelSpinner = android.widget.Spinner(this@MainActivity)
+            modelSpinner.adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, models)
+            modelSpinner.setSelection(selectedModelId)
+            addView(modelSpinner)
+            
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = "检测模式"
+                textSize = 16f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 40, 0, 10)
+            })
+            
+            val modeSpinner = android.widget.Spinner(this@MainActivity)
+            modeSpinner.adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, detectionModes)
+            modeSpinner.setSelection(if (maxNumFaces > 1) 1 else 0)
+            addView(modeSpinner)
+        }
+
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("选择识别模型")
-            .setSingleChoiceItems(models, selectedModelId) { dialog, which ->
-                selectedModelId = which
-                getSharedPreferences("settings", MODE_PRIVATE).edit().putInt("selected_model", which).apply()
-                dialog.dismiss()
-                Toast.makeText(this, "模型已切换: ${models[which]}", Toast.LENGTH_SHORT).show()
+            .setTitle("设置")
+            .setView(dialogView)
+            .setPositiveButton("保存") { _, _ ->
+                val newModelId = (dialogView.getChildAt(1) as android.widget.Spinner).selectedItemPosition
+                val newModeId = (dialogView.getChildAt(3) as android.widget.Spinner).selectedItemPosition
+                val newMaxFaces = if (newModeId == 1) 5 else 1
+                
+                var changed = false
+                if (newModelId != selectedModelId) {
+                    selectedModelId = newModelId
+                    changed = true
+                }
+                if (newMaxFaces != maxNumFaces) {
+                    maxNumFaces = newMaxFaces
+                    changed = true
+                    // 如果检测模式改变，需要重新初始化 FaceLandmarker
+                    cameraExecutor.execute {
+                        faceLandmarkerHelper.clearFaceLandmarker()
+                        faceLandmarkerHelper.maxNumFaces = maxNumFaces
+                        faceLandmarkerHelper.setupFaceLandmarker()
+                    }
+                }
+                
+                if (changed) {
+                    getSharedPreferences("settings", MODE_PRIVATE).edit().apply {
+                        putInt("selected_model", selectedModelId)
+                        putInt("max_num_faces", maxNumFaces)
+                    }.apply()
+                    Toast.makeText(this, "设置已更新", Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton("取消", null)
             .show()
