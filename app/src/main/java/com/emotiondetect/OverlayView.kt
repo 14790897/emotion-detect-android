@@ -40,6 +40,11 @@ class OverlayView @JvmOverloads constructor(
     
     // 缩放模式：0 为 FIT (完整显示), 1 为 FILL (全屏填充)
     private var scaleType: Int = 0 
+    
+    // 显示控制
+    private var showMesh: Boolean = true
+    private var showLandmarks: Boolean = true
+    private var showLabels: Boolean = true
 
     // ---------- 画笔 ----------
     private val landmarkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -115,13 +120,19 @@ class OverlayView @JvmOverloads constructor(
         emotions: List<EmotionClassifier.EmotionResult>,
         imageWidth: Int,
         imageHeight: Int,
-        scaleType: Int = 0
+        scaleType: Int = 0,
+        showMesh: Boolean = true,
+        showLandmarks: Boolean = true,
+        showLabels: Boolean = true
     ) {
         results = faceLandmarkerResults
         emotionResults = emotions
         this.imageWidth = imageWidth
         this.imageHeight = imageHeight
         this.scaleType = scaleType
+        this.showMesh = showMesh
+        this.showLandmarks = showLandmarks
+        this.showLabels = showLabels
 
         // 置信度动画（暂时只取第一个，或者可以为每个脸做动画，这里简化处理）
         val targetConf = emotions.firstOrNull()?.confidence ?: 0f
@@ -151,7 +162,7 @@ class OverlayView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        drawWithFilters(canvas, showMesh = true, showLandmarks = true, showLabels = true)
+        drawWithFilters(canvas, showMesh, showLandmarks, showLabels)
     }
 
     /**

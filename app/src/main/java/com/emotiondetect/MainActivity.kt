@@ -331,7 +331,10 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                     finalEmotionResults,
                     resultBundle.inputImageWidth,
                     resultBundle.inputImageHeight,
-                    previewScaleType
+                    previewScaleType,
+                    showMesh = (saveOverlayMode == 0),
+                    showLandmarks = (saveOverlayMode == 0),
+                    showLabels = (saveOverlayMode == 0 || saveOverlayMode == 1)
                 )
             } else {
                 // 无人脸
