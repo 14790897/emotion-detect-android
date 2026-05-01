@@ -123,6 +123,12 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
             showModelSelectionDialog()
         }
 
+        // 帮助按钮
+        binding.btnHelp.setOnClickListener {
+            val intent = android.content.Intent(this, HelpActivity::class.java)
+            startActivity(intent)
+        }
+
         // 切换摄像头按钮
         binding.btnSwitchCamera.setOnClickListener {
             isFrontCamera = !isFrontCamera

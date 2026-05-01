@@ -38,6 +38,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".HelpActivity"
+            android:exported="false"
+            android:label="使用说明"
+            android:theme="@style/Theme.EmotionDetect" />
+
     </application>
 
 </manifest>
