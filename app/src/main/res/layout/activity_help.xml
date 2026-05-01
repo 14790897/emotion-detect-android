@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:title="使用说明与文档"
+            app:title="@string/help_title"
             app:titleCentered="true" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -49,7 +49,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="💡 功能简介"
+                        android:text="@string/help_intro_title"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#333333" />
@@ -59,7 +59,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="本应用是一款基于深度学习的实时情绪检测工具。它利用 MediaPipe 进行高精度人脸关键点定位，并结合 ONNX 神经网络模型实时分析面部细微变化，从而识别出当前的心理状态。"
+                        android:text="@string/help_intro_content"
                         android:textColor="#666666" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -70,7 +70,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginStart="4dp"
-                android:text="核心算法"
+                android:text="@string/help_algo_title"
                 android:textSize="14sp"
                 android:textColor="#999999"
                 android:textStyle="bold" />
@@ -92,14 +92,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="FER+ 模型"
+                        android:text="@string/help_algo_fer_title"
                         android:textStyle="bold"
                         android:textColor="#333333" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="经典的 64x64 输入模型，平衡了速度与精度，适合大多数日常场景。"
+                        android:text="@string/help_algo_fer_content"
                         android:textSize="13sp"
                         android:textColor="#666666" />
 
@@ -108,14 +108,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="HSEmotion 模型"
+                        android:text="@string/help_algo_hse_title"
                         android:textStyle="bold"
                         android:textColor="#333333" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="现代的 224x224 E-Net 架构模型，对复杂光线和面部遮挡有更好的鲁棒性。"
+                        android:text="@string/help_algo_hse_content"
                         android:textSize="13sp"
                         android:textColor="#666666" />
 
@@ -124,14 +124,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="MediaPipe Blendshapes"
+                        android:text="@string/help_algo_mp_title"
                         android:textStyle="bold"
                         android:textColor="#333333" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="当 AI 模型尚未加载完成时，系统会基于 52 组面部系数进行几何规则计算，确保实时性。"
+                        android:text="@string/help_algo_mp_content"
                         android:textSize="13sp"
                         android:textColor="#666666" />
                 </LinearLayout>
@@ -143,7 +143,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginStart="4dp"
-                android:text="选项说明"
+                android:text="@string/help_options_title"
                 android:textSize="14sp"
                 android:textColor="#999999"
                 android:textStyle="bold" />
@@ -165,24 +165,24 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="全屏裁剪 (Fill)"
+                        android:text="@string/help_option_fill_title"
                         android:textStyle="bold" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="画面会充满整个屏幕，部分画面可能被裁切，适合沉浸式展示。"
+                        android:text="@string/help_option_fill_content"
                         android:textSize="13sp"
                         android:layout_marginBottom="12dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="完整显示 (Fit)"
+                        android:text="@string/help_option_fit_title"
                         android:textStyle="bold" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="显示摄像头拍摄到的所有内容，屏幕边缘可能会留黑边。"
+                        android:text="@string/help_option_fit_content"
                         android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -193,7 +193,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:gravity="center"
-                android:text="🔒 隐私保护说明"
+                android:text="@string/help_privacy_title"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -202,9 +202,29 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:gravity="center"
-                android:text="所有图像处理均在手机本地完成，\n不会上传任何数据到服务器。"
+                android:text="@string/help_privacy_content"
                 android:textSize="12sp"
                 android:textColor="#999999" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_privacy_policy"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/help_privacy_online"
+                android:textSize="12sp" />
+
+            <!-- 5. 版本信息 -->
+            <TextView
+                android:id="@+id/tv_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:text="@string/help_version"
+                android:textSize="11sp"
+                android:textColor="#CCCCCC" />
 
             <View android:layout_width="match_parent" android:layout_height="60dp" />
 

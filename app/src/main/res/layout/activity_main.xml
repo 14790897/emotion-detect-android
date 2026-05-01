@@ -72,7 +72,7 @@
                     android:id="@+id/tv_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="准备就绪"
+                    android:text="@string/status_ready"
                     android:textColor="#4CAF50"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -85,7 +85,7 @@
                 android:src="@android:drawable/ic_menu_help"
                 app:tint="#AAFFFFFF"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="帮助" />
+                android:contentDescription="@string/help_title" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -110,7 +110,7 @@
             android:id="@+id/tv_no_face"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="请将人脸置于画面中"
+            android:text="@string/no_face_hint"
             android:textColor="#66FFFFFF"
             android:layout_marginTop="8dp" />
     </LinearLayout>
@@ -152,12 +152,12 @@
             android:id="@+id/btn_capture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="拍照"
+            android:contentDescription="@string/app_name"
             app:backgroundTint="#FF6200EE"
             app:borderWidth="0dp"
             app:elevation="8dp"
-            app:fabCustomSize="48dp"
-            app:maxImageSize="24dp"
+            app:fabCustomSize="72dp"
+            app:maxImageSize="36dp"
             app:srcCompat="@android:drawable/ic_menu_camera"
             app:tint="#FFFFFF" />
 
@@ -172,7 +172,7 @@
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="56dp"
-            android:text="切换摄像头"
+            android:text="@string/switch_camera"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold"

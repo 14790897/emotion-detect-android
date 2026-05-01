@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.core.splashscreen)
 
     // MediaPipe Face Landmarker
     implementation(libs.mediapipe.tasks.vision)

@@ -20,6 +20,7 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -87,6 +88,9 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 安装启动闪屏
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         // 全屏显示
@@ -272,11 +276,11 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
 
             // 更新状态显示
             val mode = when {
-                lastInferenceTimeMs < 40 -> "全速 (1:1)"
-                lastInferenceTimeMs < 80 -> "均衡 (1:2)"
-                else -> "节能 (1:3)"
+                lastInferenceTimeMs < 40 -> getString(R.string.mode_full_speed)
+                lastInferenceTimeMs < 80 -> getString(R.string.mode_balanced)
+                else -> getString(R.string.mode_eco)
             }
-            binding.tvStatus.text = String.format(Locale.getDefault(), "模型: %s | %s | %.1f FPS", currentModelName, mode, currentFps)
+            binding.tvStatus.text = getString(R.string.status_format, currentModelName, mode, currentFps)
             binding.tvStatus.setTextColor(when {
                 lastInferenceTimeMs < 40 -> 0xFF4CAF50.toInt() // 绿色
                 lastInferenceTimeMs < 80 -> 0xFFFFC107.toInt() // 黄色
@@ -431,28 +435,41 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                     contentResolver.update(imageUri, contentValues, null, null)
                 }
                 
-                Toast.makeText(this, "已保存到相册", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.save_success, Toast.LENGTH_SHORT).show()
+                
+                // 自动弹出分享对话框
+                shareImage(imageUri)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.save_failed, e.message), Toast.LENGTH_SHORT).show()
         } finally {
             outputStream?.close()
         }
     }
 
+    private fun shareImage(uri: Uri) {
+        val shareIntent = android.content.Intent().apply {
+            action = android.content.Intent.ACTION_SEND
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            type = "image/jpeg"
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.share_chooser_title)))
+    }
+
     private fun showModelSelectionDialog() {
-        val models = arrayOf("FER+ (经典, 64x64)", "HSEmotion (现代, 224x224)")
-        val detectionModes = arrayOf("单人检测", "多人检测 (最多5人)")
-        val scaleModes = arrayOf("完整显示 (Fit)", "全屏裁剪 (Fill)")
-        val saveOverlayModes = arrayOf("保存全部 (标签+网格)", "仅保存情绪标签", "仅保存相机原图")
+        val models = arrayOf(getString(R.string.model_fer), getString(R.string.model_hse))
+        val detectionModes = arrayOf(getString(R.string.mode_single), getString(R.string.mode_multi))
+        val scaleModes = arrayOf(getString(R.string.scale_fit), getString(R.string.scale_fill))
+        val saveOverlayModes = arrayOf(getString(R.string.save_all), getString(R.string.save_labels), getString(R.string.save_none))
         
         val dialogView = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(60, 40, 60, 40)
             
             // 模型选择
-            addView(android.widget.TextView(this@MainActivity).apply { text = "识别模型"; textSize = 14f; setPadding(0, 10, 0, 5) })
+            addView(android.widget.TextView(this@MainActivity).apply { text = getString(R.string.settings_model); textSize = 14f; setPadding(0, 10, 0, 5) })
             val modelSpinner = android.widget.Spinner(this@MainActivity).apply {
                 adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, models)
                 setSelection(selectedModelId)
@@ -460,7 +477,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
             addView(modelSpinner)
             
             // 人脸数
-            addView(android.widget.TextView(this@MainActivity).apply { text = "检测人数"; textSize = 14f; setPadding(0, 30, 0, 5) })
+            addView(android.widget.TextView(this@MainActivity).apply { text = getString(R.string.settings_detection_mode); textSize = 14f; setPadding(0, 30, 0, 5) })
             val modeSpinner = android.widget.Spinner(this@MainActivity).apply {
                 adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, detectionModes)
                 setSelection(if (maxNumFaces > 1) 1 else 0)
@@ -468,7 +485,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
             addView(modeSpinner)
 
             // 缩放模式
-            addView(android.widget.TextView(this@MainActivity).apply { text = "画面缩放"; textSize = 14f; setPadding(0, 30, 0, 5) })
+            addView(android.widget.TextView(this@MainActivity).apply { text = getString(R.string.settings_scale_mode); textSize = 14f; setPadding(0, 30, 0, 5) })
             val scaleSpinner = android.widget.Spinner(this@MainActivity).apply {
                 adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, scaleModes)
                 setSelection(previewScaleType)
@@ -476,7 +493,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
             addView(scaleSpinner)
 
             // 保存设置
-            addView(android.widget.TextView(this@MainActivity).apply { text = "照片保存内容"; textSize = 14f; setPadding(0, 30, 0, 5) })
+            addView(android.widget.TextView(this@MainActivity).apply { text = getString(R.string.settings_save_content); textSize = 14f; setPadding(0, 30, 0, 5) })
             val saveSpinner = android.widget.Spinner(this@MainActivity).apply {
                 adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, saveOverlayModes)
                 setSelection(saveOverlayMode)
@@ -485,9 +502,9 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("算法与显示设置")
+            .setTitle(R.string.settings_title)
             .setView(dialogView)
-            .setPositiveButton("保存") { _, _ ->
+            .setPositiveButton(R.string.settings_save) { _, _ ->
                 val newModelId = (dialogView.getChildAt(1) as android.widget.Spinner).selectedItemPosition
                 val newModeId = (dialogView.getChildAt(3) as android.widget.Spinner).selectedItemPosition
                 val newScaleId = (dialogView.getChildAt(5) as android.widget.Spinner).selectedItemPosition
@@ -526,10 +543,10 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                         putInt("preview_scale_type", previewScaleType)
                         putInt("save_overlay_mode", saveOverlayMode)
                     }.apply()
-                    Toast.makeText(this, "设置已更新", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.settings_updated, Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.settings_cancel, null)
             .show()
     }
 

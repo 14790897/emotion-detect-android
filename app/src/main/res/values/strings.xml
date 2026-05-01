@@ -11,5 +11,55 @@
     <string name="emotion_fearful">恐惧</string>
     <string name="emotion_neutral">中性</string>
     <string name="no_face_detected">未检测到人脸</string>
+    <string name="no_face_hint">请将人脸置于画面中</string>
     <string name="inference_time_ms">推理: %dms</string>
+
+    <string name="status_ready">准备就绪</string>
+    <string name="status_format">模型: %1$s | %2$s | %3$.1f FPS</string>
+    <string name="mode_full_speed">全速 (1:1)</string>
+    <string name="mode_balanced">均衡 (1:2)</string>
+    <string name="mode_eco">节能 (1:3)</string>
+
+    <string name="save_success">已保存到相册</string>
+    <string name="save_failed">保存失败: %s</string>
+    <string name="share_chooser_title">分享您的情绪照片</string>
+
+    <string name="help_title">使用说明与文档</string>
+    <string name="help_intro_title">💡 功能简介</string>
+    <string name="help_intro_content">本应用是一款基于深度学习的实时情绪检测工具。它利用 MediaPipe 进行高精度人脸关键点定位，并结合 ONNX 神经网络模型实时分析面部细微变化，从而识别出当前的心理状态。</string>
+    <string name="help_algo_title">核心算法</string>
+    <string name="help_algo_fer_title">FER+ 模型</string>
+    <string name="help_algo_fer_content">经典的 64x64 输入模型，平衡了速度与精度，适合大多数日常场景。</string>
+    <string name="help_algo_hse_title">HSEmotion 模型</string>
+    <string name="help_algo_hse_content">现代的 224x224 E-Net 架构模型，对复杂光线和面部遮挡有更好的鲁棒性。</string>
+    <string name="help_algo_mp_title">MediaPipe Blendshapes</string>
+    <string name="help_algo_mp_content">当 AI 模型尚未加载完成时，系统会基于 52 组面部系数进行几何规则计算，确保实时性。</string>
+    <string name="help_options_title">选项说明</string>
+    <string name="help_option_fill_title">全屏裁剪 (Fill)</string>
+    <string name="help_option_fill_content">画面会充满整个屏幕，部分画面可能被裁切，适合沉浸式展示。</string>
+    <string name="help_option_fit_title">完整显示 (Fit)</string>
+    <string name="help_option_fit_content">显示摄像头拍摄到的所有内容，屏幕边缘可能会留黑边。</string>
+    <string name="help_privacy_title">🔒 隐私与安全</string>
+    <string name="help_privacy_content">所有图像处理均在手机本地完成，\n不会上传任何数据到服务器。</string>
+    <string name="help_privacy_online">查看在线隐私政策</string>
+    <string name="help_version">版本: 1.0.0 (Build 202410)</string>
+
+    <string name="settings_title">算法与显示设置</string>
+    <string name="settings_model">识别模型</string>
+    <string name="settings_detection_mode">检测人数</string>
+    <string name="settings_scale_mode">画面缩放</string>
+    <string name="settings_save_content">照片保存内容</string>
+    <string name="settings_save">保存</string>
+    <string name="settings_cancel">取消</string>
+    <string name="settings_updated">设置已更新</string>
+
+    <string name="model_fer">FER+ (经典, 64x64)</string>
+    <string name="model_hse">HSEmotion (现代, 224x224)</string>
+    <string name="mode_single">单人检测</string>
+    <string name="mode_multi">多人检测 (最多5人)</string>
+    <string name="scale_fit">完整显示 (Fit)</string>
+    <string name="scale_fill">全屏裁剪 (Fill)</string>
+    <string name="save_all">保存全部 (标签+网格)</string>
+    <string name="save_labels">仅保存情绪标签</string>
+    <string name="save_none">仅保存相机原图</string>
 </resources>
