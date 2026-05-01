@@ -151,7 +151,18 @@ class OverlayView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        drawWithFilters(canvas, showMesh = true, showLandmarks = true, showLabels = true)
+    }
 
+    /**
+     * 核心绘制逻辑，支持选择性绘制特定层
+     */
+    fun drawWithFilters(
+        canvas: Canvas,
+        showMesh: Boolean,
+        showLandmarks: Boolean,
+        showLabels: Boolean
+    ) {
         val result = results ?: return
         if (result.faceLandmarks().isEmpty()) return
 
@@ -172,15 +183,21 @@ class OverlayView @JvmOverloads constructor(
         val offsetY = (viewH - imgH * scale) / 2f
 
         // 绘制人脸连接线
-        drawFaceConnections(canvas, result, scale, offsetX, offsetY)
+        if (showMesh) {
+            drawFaceConnections(canvas, result, scale, offsetX, offsetY)
+        }
 
         // 绘制关键点
-        drawLandmarks(canvas, result, scale, offsetX, offsetY)
+        if (showLandmarks) {
+            drawLandmarks(canvas, result, scale, offsetX, offsetY)
+        }
 
         // 绘制所有情绪标签
-        emotionResults?.forEachIndexed { index, emotion ->
-            if (index < result.faceLandmarks().size) {
-                drawEmotionLabel(canvas, result, index, emotion, scale, offsetX, offsetY)
+        if (showLabels) {
+            emotionResults?.forEachIndexed { index, emotion ->
+                if (index < result.faceLandmarks().size) {
+                    drawEmotionLabel(canvas, result, index, emotion, scale, offsetX, offsetY)
+                }
             }
         }
     }

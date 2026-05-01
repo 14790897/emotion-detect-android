@@ -147,6 +147,25 @@
             android:layout_height="1dp"
             android:layout_weight="1" />
 
+        <!-- 拍照保存按钮 -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_capture"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:srcCompat="@android:drawable/ic_menu_camera"
+            app:fabCustomSize="72dp"
+            app:maxImageSize="32dp"
+            app:tint="#FFFFFF"
+            app:backgroundTint="#FF6200EE"
+            app:borderWidth="0dp"
+            app:elevation="8dp"
+            android:contentDescription="拍照" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
         <!-- 切换摄像头按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_switch_camera"

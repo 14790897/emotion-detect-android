@@ -9,6 +9,15 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import java.util.Locale
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.os.Build
+import android.net.Uri
+import java.io.OutputStream
+import java.util.Date
+import java.text.SimpleDateFormat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
@@ -59,6 +68,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     private var currentModelName = "None"
     private var maxNumFaces = 1 // 1: 单人, 5: 多人
     private var previewScaleType = 1 // 0: FIT (完整), 1: FILL (填充)
+    private var saveOverlayMode = 0 // 0: 全部, 1: 仅标签, 2: 仅原图
 
     // ONNX 情绪分类器
     private val ferEmotionClassifier by lazy { FerEmotionClassifier(this) }
@@ -98,6 +108,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         selectedModelId = prefs.getInt("selected_model", 0)
         maxNumFaces = prefs.getInt("max_num_faces", 1)
         previewScaleType = prefs.getInt("preview_scale_type", 1)
+        saveOverlayMode = prefs.getInt("save_overlay_mode", 0)
 
         applyPreviewScaleType()
 
@@ -127,6 +138,11 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         binding.btnHelp.setOnClickListener {
             val intent = android.content.Intent(this, HelpActivity::class.java)
             startActivity(intent)
+        }
+
+        // 拍照按钮
+        binding.btnCapture.setOnClickListener {
+            captureAndSaveImage()
         }
 
         // 切换摄像头按钮
@@ -360,10 +376,73 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         }
     }
 
+    private fun captureAndSaveImage() {
+        val previewBitmap = binding.previewView.bitmap ?: return
+        
+        // 创建一个合并后的 Bitmap
+        val resultBitmap = Bitmap.createBitmap(
+            previewBitmap.width,
+            previewBitmap.height,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(resultBitmap)
+        
+        // 绘制相机预览内容
+        canvas.drawBitmap(previewBitmap, 0f, 0f, null)
+        
+        // 根据模式选择性绘制 Overlay 层
+        when (saveOverlayMode) {
+            0 -> binding.overlayView.drawWithFilters(canvas, showMesh = true, showLandmarks = true, showLabels = true)
+            1 -> binding.overlayView.drawWithFilters(canvas, showMesh = false, showLandmarks = false, showLabels = true)
+            2 -> { /* 仅原图，不绘制任何东西 */ }
+        }
+        
+        saveBitmapToGallery(resultBitmap)
+    }
+
+    private fun saveBitmapToGallery(bitmap: Bitmap) {
+        val filename = "Emotion_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.jpg"
+        var outputStream: OutputStream? = null
+        var imageUri: Uri? = null
+        
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/EmotionDetect")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+
+        try {
+            val contentResolver = contentResolver
+            imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            
+            if (imageUri != null) {
+                outputStream = contentResolver.openOutputStream(imageUri)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream!!)
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentValues.clear()
+                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    contentResolver.update(imageUri, contentValues, null, null)
+                }
+                
+                Toast.makeText(this, "已保存到相册", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            outputStream?.close()
+        }
+    }
+
     private fun showModelSelectionDialog() {
         val models = arrayOf("FER+ (经典, 64x64)", "HSEmotion (现代, 224x224)")
         val detectionModes = arrayOf("单人检测", "多人检测 (最多5人)")
         val scaleModes = arrayOf("完整显示 (Fit)", "全屏裁剪 (Fill)")
+        val saveOverlayModes = arrayOf("保存全部 (标签+网格)", "仅保存情绪标签", "仅保存相机原图")
         
         val dialogView = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -392,6 +471,14 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 setSelection(previewScaleType)
             }
             addView(scaleSpinner)
+
+            // 保存设置
+            addView(android.widget.TextView(this@MainActivity).apply { text = "照片保存内容"; textSize = 14f; setPadding(0, 30, 0, 5) })
+            val saveSpinner = android.widget.Spinner(this@MainActivity).apply {
+                adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, saveOverlayModes)
+                setSelection(saveOverlayMode)
+            }
+            addView(saveSpinner)
         }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
@@ -401,6 +488,8 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 val newModelId = (dialogView.getChildAt(1) as android.widget.Spinner).selectedItemPosition
                 val newModeId = (dialogView.getChildAt(3) as android.widget.Spinner).selectedItemPosition
                 val newScaleId = (dialogView.getChildAt(5) as android.widget.Spinner).selectedItemPosition
+                val newSaveMode = (dialogView.getChildAt(7) as android.widget.Spinner).selectedItemPosition
+                
                 val newMaxFaces = if (newModeId == 1) 5 else 1
                 
                 var changed = false
@@ -411,6 +500,10 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 if (newScaleId != previewScaleType) {
                     previewScaleType = newScaleId
                     applyPreviewScaleType()
+                    changed = true
+                }
+                if (newSaveMode != saveOverlayMode) {
+                    saveOverlayMode = newSaveMode
                     changed = true
                 }
                 if (newMaxFaces != maxNumFaces) {
@@ -428,6 +521,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                         putInt("selected_model", selectedModelId)
                         putInt("max_num_faces", maxNumFaces)
                         putInt("preview_scale_type", previewScaleType)
+                        putInt("save_overlay_mode", saveOverlayMode)
                     }.apply()
                     Toast.makeText(this, "设置已更新", Toast.LENGTH_SHORT).show()
                 }
