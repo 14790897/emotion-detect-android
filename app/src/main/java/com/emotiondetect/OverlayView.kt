@@ -37,6 +37,9 @@ class OverlayView @JvmOverloads constructor(
     private var emotionResults: List<EmotionClassifier.EmotionResult>? = null
     private var imageWidth: Int = 1
     private var imageHeight: Int = 1
+    
+    // 缩放模式：0 为 FIT (完整显示), 1 为 FILL (全屏填充)
+    private var scaleType: Int = 0 
 
     // ---------- 画笔 ----------
     private val landmarkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -46,32 +49,34 @@ class OverlayView @JvmOverloads constructor(
     }
 
     private val connectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#4003DAC6")
-        strokeWidth = 1.2f
+        color = Color.parseColor("#3303DAC6")
+        strokeWidth = 1.0f
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
 
     private val labelBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        // 添加阴影效果
+        setShadowLayer(12f, 0f, 6f, Color.parseColor("#44000000"))
     }
 
     private val labelTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 52f
+        textSize = 54f
         typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
 
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#CCFFFFFF")
-        textSize = 34f
+        textSize = 32f
         typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         textAlign = Paint.Align.CENTER
     }
 
     private val progressBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#40FFFFFF")
+        color = Color.parseColor("#30FFFFFF")
         style = Paint.Style.FILL
     }
 
@@ -81,14 +86,27 @@ class OverlayView @JvmOverloads constructor(
 
     private val faceOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#6006C20E")
-        strokeWidth = 2f
+        strokeWidth = 3f
         style = Paint.Style.STROKE
     }
 
     // ---------- 动画 ----------
     private var animatedConfidence = 0f
     private var confidenceAnimator: ValueAnimator? = null
-    private var labelAlpha = 255
+    
+    // 呼吸动画因子，用于让网格“动起来”
+    private var pulseFactor = 1.0f
+    private val pulseAnimator = ValueAnimator.ofFloat(0.6f, 1.2f).apply {
+        duration = 1500
+        repeatMode = ValueAnimator.REVERSE
+        repeatCount = ValueAnimator.INFINITE
+        interpolator = DecelerateInterpolator()
+        addUpdateListener {
+            pulseFactor = it.animatedValue as Float
+            invalidate()
+        }
+        start()
+    }
 
     // ---------- 公共方法 ----------
 
@@ -96,12 +114,14 @@ class OverlayView @JvmOverloads constructor(
         faceLandmarkerResults: FaceLandmarkerResult,
         emotions: List<EmotionClassifier.EmotionResult>,
         imageWidth: Int,
-        imageHeight: Int
+        imageHeight: Int,
+        scaleType: Int = 0
     ) {
         results = faceLandmarkerResults
         emotionResults = emotions
         this.imageWidth = imageWidth
         this.imageHeight = imageHeight
+        this.scaleType = scaleType
 
         // 置信度动画（暂时只取第一个，或者可以为每个脸做动画，这里简化处理）
         val targetConf = emotions.firstOrNull()?.confidence ?: 0f
@@ -135,13 +155,19 @@ class OverlayView @JvmOverloads constructor(
         val result = results ?: return
         if (result.faceLandmarks().isEmpty()) return
 
-        // --- 计算 FIT_CENTER 映射 ---
+        // --- 计算 映射 ---
         val viewW = width.toFloat()
         val viewH = height.toFloat()
         val imgW = imageWidth.toFloat()
         val imgH = imageHeight.toFloat()
 
-        val scale = minOf(viewW / imgW, viewH / imgH)
+        // 根据模式选择 最小缩放(FIT) 或 最大缩放(FILL)
+        val scale = if (scaleType == 0) {
+            minOf(viewW / imgW, viewH / imgH)
+        } else {
+            maxOf(viewW / imgW, viewH / imgH)
+        }
+
         val offsetX = (viewW - imgW * scale) / 2f
         val offsetY = (viewH - imgH * scale) / 2f
 
@@ -166,8 +192,13 @@ class OverlayView @JvmOverloads constructor(
         offsetX: Float,
         offsetY: Float
     ) {
-        result.faceLandmarks().forEach { landmarks ->
+        result.faceLandmarks().forEachIndexed { index, landmarks ->
+            // 根据对应的情绪设置轮廓颜色
+            val emotion = emotionResults?.getOrNull(index)?.emotion
+            val baseColor = if (emotion != null) Color.parseColor(emotion.colorHex) else Color.parseColor("#06C20E")
+            
             // 绘制 MediaPipe 标准连接线
+            connectionPaint.alpha = (pulseFactor * 40).toInt().coerceIn(0, 255)
             FaceLandmarker.FACE_LANDMARKS_TESSELATION.forEach { connection ->
                 val start = landmarks[connection.start()]
                 val end = landmarks[connection.end()]
@@ -180,7 +211,9 @@ class OverlayView @JvmOverloads constructor(
                 )
             }
 
-            // 绘制面部轮廓（更明显的外轮廓线）
+            // 绘制面部轮廓
+            faceOutlinePaint.color = baseColor
+            faceOutlinePaint.alpha = (pulseFactor * 100).toInt().coerceIn(0, 255)
             FaceLandmarker.FACE_LANDMARKS_FACE_OVAL.forEach { connection ->
                 val start = landmarks[connection.start()]
                 val end = landmarks[connection.end()]
@@ -322,7 +355,11 @@ class OverlayView @JvmOverloads constructor(
         }
     }
 
-    // ---------- 工具方法 ----------
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        pulseAnimator.cancel()
+        confidenceAnimator?.cancel()
+    }
 
     private fun darkenColor(color: Int, factor: Float): Int {
         val r = (Color.red(color) * factor).toInt().coerceIn(0, 255)
