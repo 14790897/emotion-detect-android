@@ -167,8 +167,8 @@
             app:backgroundTint="#FF6200EE"
             app:borderWidth="0dp"
             app:elevation="8dp"
-            app:fabCustomSize="72dp"
-            app:maxImageSize="36dp"
+            app:fabCustomSize="48dp"
+            app:maxImageSize="24dp"
             app:srcCompat="@android:drawable/ic_menu_camera"
             app:tint="#FFFFFF" />
 
