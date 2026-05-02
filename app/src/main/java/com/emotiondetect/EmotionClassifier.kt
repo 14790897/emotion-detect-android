@@ -14,17 +14,17 @@ object EmotionClassifier {
 
     // ---------- 情绪枚举 ----------
     enum class Emotion(
-        val displayName: String,
+        val resId: Int,
         val emoji: String,
         val colorHex: String
     ) {
-        HAPPY("开心", "😊", "#4CAF50"),
-        SAD("悲伤", "😢", "#2196F3"),
-        SURPRISED("惊讶", "😮", "#FFEB3B"),
-        ANGRY("愤怒", "😠", "#F44336"),
-        DISGUSTED("厌恶", "🤢", "#9C27B0"),
-        FEARFUL("恐惧", "😨", "#607D8B"),
-        NEUTRAL("中性", "😐", "#FFFFFF")
+        HAPPY(R.string.emotion_happy, "😊", "#4CAF50"),
+        SAD(R.string.emotion_sad, "😢", "#2196F3"),
+        SURPRISED(R.string.emotion_surprised, "😮", "#FFEB3B"),
+        ANGRY(R.string.emotion_angry, "😠", "#F44336"),
+        DISGUSTED(R.string.emotion_disgusted, "🤢", "#9C27B0"),
+        FEARFUL(R.string.emotion_fearful, "😨", "#607D8B"),
+        NEUTRAL(R.string.emotion_neutral, "😐", "#FFFFFF")
     }
 
     data class EmotionResult(

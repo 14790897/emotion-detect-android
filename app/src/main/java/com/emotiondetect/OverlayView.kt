@@ -343,8 +343,9 @@ class OverlayView @JvmOverloads constructor(
         } else {
             Color.WHITE
         }
+        val emotionName = context.getString(emotion.emotion.resId)
         canvas.drawText(
-            "${emotion.emotion.emoji}  ${emotion.emotion.displayName}",
+            "${emotion.emotion.emoji}  $emotionName",
             faceCenterX,
             textY,
             labelTextPaint
