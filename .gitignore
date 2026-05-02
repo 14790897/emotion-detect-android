@@ -25,3 +25,6 @@ app/signing.properties
 app/release
 *.apk
 *.aab
+
+# 宣传图
+*.png
