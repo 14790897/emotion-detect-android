@@ -1,5 +1,7 @@
 package com.emotiondetect
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.emotiondetect.databinding.ActivityPrivacyBinding
@@ -16,6 +18,12 @@ class PrivacyActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
+
+        // 在线隐私政策链接
+        binding.btnOnlinePrivacy.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://mygithub.14790897.xyz/Privacy-Policy/"))
+            startActivity(intent)
+        }
 
         // 设置隐私政策正文
         binding.tvPrivacyContent.text = """

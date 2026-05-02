@@ -7,6 +7,8 @@
 # --- MediaPipe Rules ---
 -keep class com.google.mediapipe.** { *; }
 -keep class com.google.android.libraries.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.proto.CalculatorProfileProto$CalculatorProfile
+-dontwarn com.google.mediapipe.proto.GraphTemplateProto$CalculatorGraphTemplate
 # For JNI
 -keepclassmembers class * {
     native <methods>;
