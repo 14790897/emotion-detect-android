@@ -42,7 +42,19 @@
         <activity
             android:name=".HelpActivity"
             android:exported="false"
-            android:label="使用说明"
+            android:label="@string/help_title"
+            android:theme="@style/Theme.EmotionDetect" />
+
+        <activity
+            android:name=".StatsActivity"
+            android:exported="false"
+            android:label="@string/stats_title"
+            android:theme="@style/Theme.EmotionDetect" />
+
+        <activity
+            android:name=".PrivacyActivity"
+            android:exported="false"
+            android:label="隐私政策"
             android:theme="@style/Theme.EmotionDetect" />
 
     </application>

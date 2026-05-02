@@ -208,12 +208,12 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_privacy_policy"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="@string/help_privacy_online"
-                android:textSize="12sp" />
+                android:text="查看完整隐私政策"
+                android:textSize="13sp" />
 
             <!-- 5. 版本信息 -->
             <TextView

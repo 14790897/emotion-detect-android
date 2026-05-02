@@ -21,8 +21,7 @@ class HelpActivity : AppCompatActivity() {
         }
 
         binding.btnPrivacyPolicy.setOnClickListener {
-            val url = "https://your-privacy-policy-link.com" // 请替换为您真实的链接
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            val intent = android.content.Intent(this, PrivacyActivity::class.java)
             startActivity(intent)
         }
     }

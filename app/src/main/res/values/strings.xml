@@ -62,4 +62,6 @@
     <string name="save_all">保存全部 (标签+网格)</string>
     <string name="save_labels">仅保存情绪标签</string>
     <string name="save_none">仅保存相机原图</string>
+    <string name="stat_count_format">%d 次</string>
+    <string name="stats_title">情绪统计</string>
 </resources>

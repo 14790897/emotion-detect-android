@@ -62,4 +62,6 @@
     <string name="save_all">Save All (Labels + Mesh)</string>
     <string name="save_labels">Save Labels Only</string>
     <string name="save_none">Save Original Photo Only</string>
+    <string name="stat_count_format">%d times</string>
+    <string name="stats_title">Emotion Stats</string>
 </resources>

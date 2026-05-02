@@ -71,6 +71,9 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     private var previewScaleType = 1 // 0: FIT (完整), 1: FILL (填充)
     private var saveOverlayMode = 0 // 0: 全部, 1: 仅标签, 2: 仅原图
 
+    // 当前检测到的最主要情绪（用于统计）
+    private var lastPrimaryEmotion: EmotionClassifier.Emotion? = null
+
     // ONNX 情绪分类器
     private val ferEmotionClassifier by lazy { FerEmotionClassifier(this) }
     private val hseEmotionClassifier by lazy { HseEmotionClassifier(this) }
@@ -141,6 +144,12 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         // 帮助按钮
         binding.btnHelp.setOnClickListener {
             val intent = android.content.Intent(this, HelpActivity::class.java)
+            startActivity(intent)
+        }
+
+        // 统计按钮
+        binding.btnStats.setOnClickListener {
+            val intent = android.content.Intent(this, StatsActivity::class.java)
             startActivity(intent)
         }
 
@@ -328,6 +337,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                         EmotionClassifier.classifySingle(faceBlendshape, useSmoothing = (maxNumFaces == 1))
                     }
                     finalEmotionResults.add(emotionResult)
+                    if (i == 0) lastPrimaryEmotion = emotionResult.emotion
                 }
 
                 binding.overlayView.setResults(
@@ -405,6 +415,17 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         }
         
         saveBitmapToGallery(resultBitmap)
+        
+        // 记录情绪统计
+        lastPrimaryEmotion?.let { recordEmotionStat(it) }
+    }
+
+    private fun recordEmotionStat(emotion: EmotionClassifier.Emotion) {
+        val prefs = getSharedPreferences("emotion_stats", MODE_PRIVATE)
+        val today = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+        val key = "${today}_${emotion.name}"
+        val currentCount = prefs.getInt(key, 0)
+        prefs.edit().putInt(key, currentCount + 1).apply()
     }
 
     private fun saveBitmapToGallery(bitmap: Bitmap) {
