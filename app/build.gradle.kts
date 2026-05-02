@@ -43,8 +43,12 @@ android {
         applicationId = "com.emotiondetect"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -76,6 +80,7 @@ android {
 
     // Exclude conflicting meta-inf files from MediaPipe
     packaging {
+        jniLibs.useLegacyPackaging = true
         resources {
             excludes += setOf(
                 "META-INF/LICENSE",
