@@ -14,6 +14,7 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import java.util.concurrent.atomic.AtomicBoolean
 
 import kotlin.math.max
 import kotlin.math.min
@@ -34,6 +35,7 @@ class FaceLandmarkerHelper(
 ) {
 
     private var faceLandmarker: FaceLandmarker? = null
+    private val isBusy = AtomicBoolean(false)
 
     /** 最新旋转后的帧 Bitmap（用于 ONNX 人脸裁切） */
     private var latestFrameBitmap: Bitmap? = null
@@ -87,6 +89,12 @@ class FaceLandmarkerHelper(
         imageProxy: ImageProxy,
         isFrontCamera: Boolean
     ) {
+        if (isBusy.get()) {
+            imageProxy.close()
+            return
+        }
+        isBusy.set(true)
+
         val frameTime = SystemClock.uptimeMillis()
 
         // 将 ImageProxy 转为 Bitmap
@@ -139,21 +147,25 @@ class FaceLandmarkerHelper(
         result: FaceLandmarkerResult,
         input: MPImage
     ) {
-        val finishTimeMs = SystemClock.uptimeMillis()
-        val inferenceTime = finishTimeMs - result.timestampMs()
+        try {
+            val finishTimeMs = SystemClock.uptimeMillis()
+            val inferenceTime = finishTimeMs - result.timestampMs()
 
-        // 根据 landmarks 从缓存帧裁切所有检测到的人脸
-        val faceCrops = cropAllFacesFromLandmarks(result, input.width, input.height)
+            // 根据 landmarks 从缓存帧裁切所有检测到的人脸
+            val faceCrops = cropAllFacesFromLandmarks(result, input.width, input.height)
 
-        faceLandmarkerHelperListener?.onResults(
-            ResultBundle(
-                results = listOf(result),
-                inferenceTime = inferenceTime,
-                inputImageHeight = input.height,
-                inputImageWidth = input.width,
-                faceCropBitmaps = faceCrops
+            faceLandmarkerHelperListener?.onResults(
+                ResultBundle(
+                    results = listOf(result),
+                    inferenceTime = inferenceTime,
+                    inputImageHeight = input.height,
+                    inputImageWidth = input.width,
+                    faceCropBitmaps = faceCrops
+                )
             )
-        )
+        } finally {
+            isBusy.set(false)
+        }
     }
 
     /**
@@ -224,6 +236,7 @@ class FaceLandmarkerHelper(
      * 接收 LIVE_STREAM 检测错误回调
      */
     private fun returnLivestreamError(error: RuntimeException) {
+        isBusy.set(false)
         faceLandmarkerHelperListener?.onError(
             error.message ?: "未知错误",
             OTHER_ERROR
