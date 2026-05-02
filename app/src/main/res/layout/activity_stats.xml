@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:title="情绪统计"
+            app:title="@string/stats_title"
             app:titleCentered="true" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -35,7 +35,7 @@
                 android:id="@+id/tv_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="今日捕捉到的瞬间"
+                android:text="@string/stats_today_moments"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="#333333" />
@@ -43,7 +43,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="这些是你今天通过拍照捕捉到的真实情绪"
+                android:text="@string/stats_description"
                 android:textSize="13sp"
                 android:textColor="#999999"
                 android:layout_marginTop="4dp" />
@@ -71,7 +71,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:gravity="center"
-                android:text="今天还没有捕捉到任何情绪\n快去拍一张吧！"
+                android:text="@string/stats_empty_hint"
                 android:textColor="#BBBBBB"
                 android:visibility="gone" />
 
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="32dp"
-                android:text="重置今日统计"
+                android:text="@string/stats_reset"
                 android:textColor="#FF5252" />
 
         </LinearLayout>

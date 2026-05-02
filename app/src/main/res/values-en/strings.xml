@@ -66,4 +66,8 @@
     <string name="save_none">Save Original Photo Only</string>
     <string name="stat_count_format">%d times</string>
     <string name="stats_title">Emotion Stats</string>
+    <string name="stats_today_moments">Today\'s Moments</string>
+    <string name="stats_description">These are the authentic emotions you captured today.</string>
+    <string name="stats_empty_hint">No emotions captured today.\nGo take a photo!</string>
+    <string name="stats_reset">Reset Today\'s Stats</string>
 </resources>

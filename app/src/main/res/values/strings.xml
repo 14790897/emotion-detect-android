@@ -66,4 +66,8 @@
     <string name="save_none">仅保存相机原图</string>
     <string name="stat_count_format">%d 次</string>
     <string name="stats_title">情绪统计</string>
+    <string name="stats_today_moments">今日捕捉到的瞬间</string>
+    <string name="stats_description">这些是你今天通过拍照捕捉到的真实情绪</string>
+    <string name="stats_empty_hint">今天还没有捕捉到任何情绪\n快去拍一张吧！</string>
+    <string name="stats_reset">重置今日统计</string>
 </resources>
