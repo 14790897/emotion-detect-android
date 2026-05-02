@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.util.Date
+import java.text.SimpleDateFormat
 
 plugins {
     alias(libs.plugins.android.application)
@@ -43,8 +45,8 @@ android {
         applicationId = "com.emotiondetect"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = SimpleDateFormat("yyMMddHH").format(Date()).toInt()
+        versionName = "2.0.0"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
