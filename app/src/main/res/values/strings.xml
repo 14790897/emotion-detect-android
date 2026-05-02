@@ -11,8 +11,10 @@
     <string name="emotion_fearful">恐惧</string>
     <string name="emotion_neutral">中性</string>
     <string name="no_face_detected">未检测到人脸</string>
+    <string name="error_detection">检测错误: %s</string>
     <string name="no_face_hint">请将人脸置于画面中</string>
     <string name="inference_time_ms">推理: %dms</string>
+    <string name="default_inference_time">-- ms</string>
 
     <string name="status_ready">准备就绪</string>
     <string name="status_format">模型: %1$s | %2$s | %3$.1f FPS</string>

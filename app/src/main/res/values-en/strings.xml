@@ -13,6 +13,8 @@
     <string name="no_face_detected">No face detected</string>
     <string name="no_face_hint">Please place your face in the frame</string>
     <string name="inference_time_ms">Inference: %dms</string>
+    <string name="default_inference_time">-- ms</string>
+    <string name="error_detection">Detection error: %s</string>
 
     <string name="status_ready">Ready</string>
     <string name="status_format">Model: %1$s | %2$s | %3$.1f FPS</string>

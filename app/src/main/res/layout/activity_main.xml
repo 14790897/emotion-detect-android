@@ -63,7 +63,7 @@
                     android:id="@+id/tv_inference_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- ms"
+                    android:text="@string/default_inference_time"
                     android:textColor="#CCFFFFFF"
                     android:textSize="12sp"
                     android:fontFamily="sans-serif-medium" />

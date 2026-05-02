@@ -361,7 +361,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     override fun onError(error: String, errorCode: Int) {
         runOnUiThread {
             Log.e(TAG, "FaceLandmarker error: $error (code $errorCode)")
-            Toast.makeText(this, "检测错误: $error", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_detection, error), Toast.LENGTH_SHORT).show()
         }
     }
 
