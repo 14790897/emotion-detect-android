@@ -45,7 +45,9 @@ android {
         applicationId = "com.emotiondetect"
         minSdk = 26
         targetSdk = 35
-        versionCode = SimpleDateFormat("yyMMddHH").format(Date()).toInt()
+        // 格式：yyMMddHH + 分钟的十位（例如 15:36 -> 153），每10分钟变动一次
+        val timestamp = SimpleDateFormat("yyMMddHHmm").format(Date())
+        versionCode = timestamp.substring(0, timestamp.length - 1).toInt()
         versionName = "2.0.0"
 
         ndk {
