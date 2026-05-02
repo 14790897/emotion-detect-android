@@ -29,6 +29,7 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import android.content.res.Configuration
 import com.emotiondetect.databinding.ActivityMainBinding
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import java.util.concurrent.ExecutorService
@@ -197,6 +198,8 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
             return
         }
 
+        val rotation = binding.previewView.display?.rotation ?: android.view.Surface.ROTATION_0
+
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(cameraFacing)
             .build()
@@ -204,6 +207,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         // 预览
         val preview = Preview.Builder()
             .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setTargetRotation(rotation)
             .build()
             .also {
                 it.setSurfaceProvider(binding.previewView.surfaceProvider)
@@ -212,6 +216,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         // 图像分析（用于 MediaPipe）
         imageAnalyzer = ImageAnalysis.Builder()
             .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setTargetRotation(rotation)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
@@ -232,6 +237,12 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
         } catch (e: Exception) {
             Log.e(TAG, "Use case binding failed", e)
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 重新绑定相机以适应新的旋转角度
+        bindCameraUseCases()
     }
 
     /**
@@ -265,9 +276,49 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     // ---------- FaceLandmarkerHelper.LandmarkerListener ----------
 
     override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
-        runOnUiThread {
-            val result = resultBundle.results.firstOrNull() ?: return@runOnUiThread
+        val result = resultBundle.results.firstOrNull() ?: return
+        val allFaceLandmarks = result.faceLandmarks()
+        val allFaceBlendshapes = result.faceBlendshapes().orElse(emptyList())
+        val finalEmotionResults = mutableListOf<EmotionClassifier.EmotionResult>()
+        var primaryModelName = currentModelName
 
+        if (allFaceLandmarks.isNotEmpty()) {
+            for (i in allFaceLandmarks.indices) {
+                val faceCrop = resultBundle.faceCropBitmaps.getOrNull(i)
+                val faceBlendshape = allFaceBlendshapes.getOrNull(i) ?: emptyList()
+
+                var ferResult: FerEmotionClassifier.Result? = null
+
+                if (faceCrop != null) {
+                    when (selectedModelId) {
+                        0 -> {
+                            if (ferEmotionClassifier.isReady()) {
+                                ferResult = ferEmotionClassifier.classify(faceCrop)
+                                if (i == 0) primaryModelName = "ONNX (FER+)"
+                            }
+                        }
+                        1 -> {
+                            if (hseEmotionClassifier.isReady()) {
+                                ferResult = hseEmotionClassifier.classify(faceCrop)
+                                if (i == 0) primaryModelName = "HSEmotion (E-Net)"
+                            }
+                        }
+                    }
+                }
+
+                // 优先使用 ONNX 结果，降级到 Blendshape
+                val emotionResult = if (ferResult != null) {
+                    ferResult.toEmotionResult()
+                } else {
+                    if (i == 0) primaryModelName = "MediaPipe"
+                    // 只有单人模式才开启平滑
+                    EmotionClassifier.classifySingle(faceBlendshape, useSmoothing = (maxNumFaces == 1))
+                }
+                finalEmotionResults.add(emotionResult)
+            }
+        }
+
+        runOnUiThread {
             // 更新推理时间
             lastInferenceTimeMs = resultBundle.inferenceTime
             binding.tvInferenceTime.text = getString(
@@ -283,6 +334,8 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 lastFpsTimestamp = now
             }
 
+            currentModelName = primaryModelName
+
             // 更新状态显示
             val mode = when {
                 lastInferenceTimeMs < 40 -> getString(R.string.mode_full_speed)
@@ -296,49 +349,10 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
                 else -> 0xFFF44336.toInt() // 红色
             })
 
-            val allFaceLandmarks = result.faceLandmarks()
-            val allFaceBlendshapes = result.faceBlendshapes().orElse(emptyList())
-
             if (allFaceLandmarks.isNotEmpty()) {
-                // 有人脸：分类情绪 + 更新叠加层
+                // 有人脸：更新叠加层
                 binding.llNoFace.visibility = View.GONE
-
-                val finalEmotionResults = mutableListOf<EmotionClassifier.EmotionResult>()
-
-                for (i in allFaceLandmarks.indices) {
-                    val faceCrop = resultBundle.faceCropBitmaps.getOrNull(i)
-                    val faceBlendshape = allFaceBlendshapes.getOrNull(i) ?: emptyList()
-
-                    var ferResult: FerEmotionClassifier.Result? = null
-                    
-                    if (faceCrop != null) {
-                        when (selectedModelId) {
-                            0 -> {
-                                if (ferEmotionClassifier.isReady()) {
-                                    ferResult = ferEmotionClassifier.classify(faceCrop)
-                                    if (i == 0) currentModelName = "ONNX (FER+)"
-                                }
-                            }
-                            1 -> {
-                                if (hseEmotionClassifier.isReady()) {
-                                    ferResult = hseEmotionClassifier.classify(faceCrop)
-                                    if (i == 0) currentModelName = "HSEmotion (E-Net)"
-                                }
-                            }
-                        }
-                    }
-
-                    // 优先使用 ONNX 结果，降级到 Blendshape
-                    val emotionResult = if (ferResult != null) {
-                        ferResult.toEmotionResult()
-                    } else {
-                        if (i == 0) currentModelName = "MediaPipe"
-                        // 只有单人模式才开启平滑
-                        EmotionClassifier.classifySingle(faceBlendshape, useSmoothing = (maxNumFaces == 1))
-                    }
-                    finalEmotionResults.add(emotionResult)
-                    if (i == 0) lastPrimaryEmotion = emotionResult.emotion
-                }
+                lastPrimaryEmotion = finalEmotionResults.firstOrNull()?.emotion
 
                 binding.overlayView.setResults(
                     result,
