@@ -20,3 +20,8 @@ app/build
 signing.jks
 *.jks
 app/signing.properties
+
+# 构建文件
+app/release
+*.apk
+*.aab

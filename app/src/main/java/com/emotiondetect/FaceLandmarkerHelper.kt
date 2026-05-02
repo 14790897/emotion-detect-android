@@ -14,7 +14,7 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
-import java.util.concurrent.ScheduledExecutorService
+
 import kotlin.math.max
 import kotlin.math.min
 
@@ -171,8 +171,8 @@ class FaceLandmarkerHelper(
             val f = latestFrameBitmap
             if (f == null || f.isRecycled) return emptyList()
             try {
-                f.copy(f.config, false)
-            } catch (e: Exception) {
+                f.copy(Bitmap.Config.ARGB_8888, false)
+            } catch (_: Exception) {
                 null
             }
         } ?: return emptyList()
