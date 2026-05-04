@@ -1,6 +1,6 @@
-import java.util.Properties
-import java.util.Date
 import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -31,6 +31,9 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = file("C:\\Users\\13963\\.android\\debug.keystore")
+        }
         if (hasSigningProps) {
             create("release") {
                 storeFile = rootProject.file("app/$storeFileName")
@@ -57,8 +60,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            // 暂时禁用混淆以验证是否为 R8 引起
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -82,9 +86,12 @@ android {
         viewBinding = true
     }
 
+    androidResources {
+        noCompress += listOf("task", "onnx", "tflite")
+    }
+
     // Exclude conflicting meta-inf files from MediaPipe
     packaging {
-        jniLibs.useLegacyPackaging = true
         resources {
             excludes += setOf(
                 "META-INF/LICENSE",

@@ -122,19 +122,27 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
 
         // 初始化所有模型
         cameraExecutor.execute {
-            Log.d(TAG, "后台线程：开始初始化 FaceLandmarker 和 AI 模型...")
-            faceLandmarkerHelper = FaceLandmarkerHelper(
-                context = this,
-                maxNumFaces = maxNumFaces,
-                faceLandmarkerHelperListener = this
-            )
-            Log.d(TAG, "FaceLandmarkerHelper 初始化指令已发出")
-            
-            ferEmotionClassifier.initialize()
-            Log.d(TAG, "FER+ 初始化完成，状态: ${ferEmotionClassifier.isReady()}")
-            
-            hseEmotionClassifier.initialize()
-            Log.d(TAG, "HSEmotion 初始化完成，状态: ${hseEmotionClassifier.isReady()}")
+            try {
+                Log.d(TAG, "后台线程：开始初始化 FaceLandmarker 和 AI 模型...")
+                
+                faceLandmarkerHelper = FaceLandmarkerHelper(
+                    context = this,
+                    maxNumFaces = maxNumFaces,
+                    faceLandmarkerHelperListener = this
+                )
+                Log.d(TAG, "FaceLandmarkerHelper 初始化指令已发出")
+                
+                ferEmotionClassifier.initialize()
+                Log.d(TAG, "FER+ 初始化完成，状态: ${ferEmotionClassifier.isReady()}")
+                
+                hseEmotionClassifier.initialize()
+                Log.d(TAG, "HSEmotion 初始化完成，状态: ${hseEmotionClassifier.isReady()}")
+            } catch (e: Throwable) {
+                Log.e(TAG, "初始化过程中发生严重错误", e)
+                runOnUiThread {
+                    Toast.makeText(this, "模型初始化失败: ${e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         // 设置按钮

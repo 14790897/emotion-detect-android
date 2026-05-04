@@ -70,11 +70,11 @@ class FaceLandmarkerHelper(
             .setErrorListener(this::returnLivestreamError)
 
         try {
-            faceLandmarker = FaceLandmarker.createFromOptions(context, optionsBuilder.build())
+            faceLandmarker = FaceLandmarker.createFromOptions(context.applicationContext, optionsBuilder.build())
             Log.d(TAG, "FaceLandmarker initialized successfully")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             faceLandmarkerHelperListener?.onError(
-                "FaceLandmarker 初始化失败: ${e.message}",
+                "FaceLandmarker 初始化失败: ${e.message ?: e.toString()}",
                 GPU_ERROR
             )
             Log.e(TAG, "FaceLandmarker initialization failed", e)
