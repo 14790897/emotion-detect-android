@@ -107,71 +107,53 @@ object EmotionClassifier {
 
     /**
      * 计算各情绪原始分数（基于 Blendshape 加权公式）
+     * 进一步优化：显著提升“皱眉”（browDown）的权重，使愤怒和忧虑更易识别
      */
     private fun computeEmotionScores(bs: Map<String, Float>): Map<Emotion, Float> {
         fun get(name: String) = bs[name] ?: 0f
 
         // --- 开心 ---
-        // 双侧嘴角上扬 + 眼部眯起（真诚笑容的杜乡标志）
         val happy = (
-            get(BS_MOUTH_SMILE_LEFT) * 0.35f +
-            get(BS_MOUTH_SMILE_RIGHT) * 0.35f +
-            get(BS_CHEEK_SQUINT_LEFT) * 0.15f +
-            get(BS_CHEEK_SQUINT_RIGHT) * 0.15f
-        )
+            (get(BS_MOUTH_SMILE_LEFT) + get(BS_MOUTH_SMILE_RIGHT)) * 0.45f +
+            (get(BS_CHEEK_SQUINT_LEFT) + get(BS_CHEEK_SQUINT_RIGHT)) * 0.05f
+        ).coerceIn(0f, 1f)
 
         // --- 悲伤 ---
-        // 嘴角下垂 + 眉头聚拢上扬
         val sad = (
-            get(BS_MOUTH_FROWN_LEFT) * 0.30f +
-            get(BS_MOUTH_FROWN_RIGHT) * 0.30f +
-            get(BS_BROW_INNER_UP) * 0.25f +
-            (1f - get(BS_JAW_OPEN)) * 0.15f
-        )
+            get(BS_BROW_INNER_UP) * 0.60f + 
+            (get(BS_MOUTH_FROWN_LEFT) + get(BS_MOUTH_FROWN_RIGHT)) * 0.30f
+        ).coerceIn(0f, 1f)
 
         // --- 惊讶 ---
-        // 下巴张开 + 眼睛睁大 + 眉毛外侧上扬
         val surprised = (
-            get(BS_JAW_OPEN) * 0.35f +
-            get(BS_EYE_WIDE_LEFT) * 0.20f +
-            get(BS_EYE_WIDE_RIGHT) * 0.20f +
-            get(BS_BROW_OUTER_UP_LEFT) * 0.125f +
-            get(BS_BROW_OUTER_UP_RIGHT) * 0.125f
-        )
+            get(BS_JAW_OPEN) * 0.60f +
+            (get(BS_EYE_WIDE_LEFT) + get(BS_EYE_WIDE_RIGHT)) * 0.20f
+        ).coerceIn(0f, 1f)
 
-        // --- 愤怒 ---
-        // 眉头下压 + 鼻子皱起 + 嘴角上扬（蔑视）
+        // --- 愤怒 (核心解决“皱眉”识别) ---
+        // 将眉毛下压（browDown）的权重从 0.4 提升至 0.8，即使不眯眼或皱鼻也能识别出愤怒
         val angry = (
-            get(BS_BROW_DOWN_LEFT) * 0.30f +
-            get(BS_BROW_DOWN_RIGHT) * 0.30f +
-            get(BS_NOSE_SNEER_LEFT) * 0.20f +
-            get(BS_NOSE_SNEER_RIGHT) * 0.20f
-        )
+            (get(BS_BROW_DOWN_LEFT) + get(BS_BROW_DOWN_RIGHT)) * 0.80f +
+            (get(BS_EYE_SQUINT_LEFT) + get(BS_EYE_SQUINT_RIGHT)) * 0.10f +
+            (get(BS_NOSE_SNEER_LEFT) + get(BS_NOSE_SNEER_RIGHT)) * 0.10f
+        ).coerceIn(0f, 1f)
 
         // --- 厌恶 ---
-        // 鼻子皱起 + 上唇上扬
         val disgusted = (
-            get(BS_NOSE_SNEER_LEFT) * 0.30f +
-            get(BS_NOSE_SNEER_RIGHT) * 0.30f +
-            get(BS_MOUTH_UPPER_UP_LEFT) * 0.20f +
-            get(BS_MOUTH_UPPER_UP_RIGHT) * 0.20f
-        )
+            (get(BS_NOSE_SNEER_LEFT) + get(BS_NOSE_SNEER_RIGHT)) * 0.60f +
+            (get(BS_MOUTH_UPPER_UP_LEFT) + get(BS_MOUTH_UPPER_UP_RIGHT)) * 0.20f
+        ).coerceIn(0f, 1f)
 
         // --- 恐惧 ---
-        // 眼睛睁大 + 眉头内侧上扬 + 下巴微张
         val fearful = (
-            get(BS_EYE_WIDE_LEFT) * 0.25f +
-            get(BS_EYE_WIDE_RIGHT) * 0.25f +
-            get(BS_BROW_INNER_UP) * 0.30f +
-            get(BS_JAW_OPEN) * 0.10f +
-            get(BS_BROW_OUTER_UP_LEFT) * 0.05f +
-            get(BS_BROW_OUTER_UP_RIGHT) * 0.05f
-        )
+            get(BS_BROW_INNER_UP) * 0.50f +
+            (get(BS_EYE_WIDE_LEFT) + get(BS_EYE_WIDE_RIGHT)) * 0.40f
+        ).coerceIn(0f, 1f)
 
         // --- 中性 ---
-        // 其他情绪均低时为中性（基础分 + 各情绪负面贡献）
+        // 极大地降低中性的默认得分，让系统对微小的表情变化更敏感
         val maxOther = maxOf(happy, sad, surprised, angry, disgusted, fearful)
-        val neutral = (1f - maxOther * 1.5f).coerceAtLeast(0f)
+        val neutral = if (maxOther < 0.10f) 0.3f else (0.1f - maxOther).coerceAtLeast(0f)
 
         return mapOf(
             Emotion.HAPPY to happy,
