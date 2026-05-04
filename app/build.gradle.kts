@@ -31,9 +31,6 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = file("C:\\Users\\13963\\.android\\debug.keystore")
-        }
         if (hasSigningProps) {
             create("release") {
                 storeFile = rootProject.file("app/$storeFileName")
