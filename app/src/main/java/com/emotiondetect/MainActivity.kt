@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
     // ONNX 情绪分类器
     private val ferEmotionClassifier by lazy { FerEmotionClassifier(this) }
     private val hseEmotionClassifier by lazy { HseEmotionClassifier(this) }
-    private var selectedModelId = 0 // 0: FER+, 1: HSEmotion
+    private var selectedModelId = 1 // 0: FER+, 1: HSEmotion
 
     // 权限请求
     private val requestPermissionLauncher =
@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListene
 
         // 加载保存的模型设置
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-        selectedModelId = prefs.getInt("selected_model", 0)
+        selectedModelId = prefs.getInt("selected_model", 1)
         maxNumFaces = prefs.getInt("max_num_faces", 1)
         previewScaleType = prefs.getInt("preview_scale_type", 1)
         saveOverlayMode = prefs.getInt("save_overlay_mode", 0)
