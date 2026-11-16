@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.emotiondetect"
-    compileSdk = 35
+    compileSdk = 36
 
     val signingPropsFile = rootProject.file("app/signing.properties")
     val signingProps = Properties()
@@ -44,11 +44,11 @@ android {
     defaultConfig {
         applicationId = "com.emotiondetect"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // 格式：yyMMddHH + 分钟的十位（例如 15:36 -> 153），每10分钟变动一次
         val timestamp = SimpleDateFormat("yyMMddHHmm").format(Date())
         versionCode = timestamp.substring(0, timestamp.length - 1).toInt()
-        versionName = "2.0.0"
+        versionName = "2.0.1"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
