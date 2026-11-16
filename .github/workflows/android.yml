@@ -182,7 +182,7 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            release/*.apk
-            release/*.aab
+            release/**/*.apk
+            release/**/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
