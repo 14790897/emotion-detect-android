@@ -127,23 +127,28 @@ jobs:
             echo "keyPassword=$ANDROID_SIGNING_KEY_PASSWORD"
           } > app/signing.properties
 
-      - name: Build release APK
-        run: gradle assembleRelease
+      - name: Build release artifacts
+        run: gradle assembleRelease bundleRelease
 
-      - name: Verify signed APK
+      - name: Verify signed artifacts
         run: |
           if ! ls app/build/outputs/apk/release/*-release.apk >/dev/null 2>&1; then
             echo "::error::No signed release APK found. Ensure signing configuration is applied."
             exit 1
           fi
+          if ! ls app/build/outputs/bundle/release/*.aab >/dev/null 2>&1; then
+            echo "::error::No release AAB found. bundleRelease did not produce an app bundle."
+            exit 1
+          fi
 
-      - name: Upload release APK
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: release-artifacts
           path: |
             app/build/outputs/apk/release/*-release.apk
             !app/build/outputs/apk/release/*-unsigned.apk
+            app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
   # ── 发布 GitHub Release ─────────────────────────────
@@ -159,10 +164,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download release APK
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-apk
+          name: release-artifacts
           path: release/
 
       - name: Prepare changelog
@@ -184,5 +189,6 @@ jobs:
           generate_release_notes: true
           files: |
             release/*.apk
+            release/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
